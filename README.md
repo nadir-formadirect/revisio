@@ -61,3 +61,9 @@ La validation d'un chapitre est refusée si les identifiants se chevauchent ou s
 Cette version possède 100 questions d'entraînement et 75 questions d'évaluation, sur 5 chapitres.
 
 Les évaluations ne sont pas générées à la volée par une IA : ce sont des sujets prévalidés. Le mélange de l'ordre ne doit pas être confondu avec une nouvelle génération d'exercices.
+
+## Remédiation ciblée (V3.1)
+Après un contrôle, les réponses erronées, non renseignées ou partiellement justes sont regroupées par notion. Les réponses libres à validation parentale en attente ne sont pas considérées comme fausses.
+L'application sélectionne jusqu'à 12 exercices issus de la banque d'entraînement, avec au maximum trois exercices par notion, et affiche une correction immédiate.
+La séance de remédiation affiche un score « exercices réussis / exercices proposés », **pas une nouvelle note sur 20**. Elle ne remplace pas le score du contrôle d'origine.
+Le bouton « Refaire un contrôle » permet ensuite de repasser la banque d'évaluation dans un ordre différent. Il ne s'agit pas d'un nouveau sujet généré par IA : pour l'instant, la banque comporte un sujet d'évaluation par chapitre.
