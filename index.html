@@ -40,7 +40,7 @@
 .session-home{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#f0edff;border:1px solid #ddd7ff;border-radius:12px;color:#4d3db4;min-height:43px;padding:9px 13px;font-weight:800;font-size:14px}.session-home:active{background:#e4ddff}.session-home span{font-size:14px}
 </style></head><body><main class="wrap" id="app"></main><script>
 const COURSES=[];
-const app=document.getElementById('app');const S={profile:'Enfant 1',course:'anglais',mode:'evaluation',screen:'home',index:0,answers:{},verified:{},grades:{}};
+const app=document.getElementById('app');const S={profile:'Enfant 1',course:'anglais',mode:'evaluation',screen:'home',index:0,answers:{},verified:{},grades:{},order:null};
 
 const LOCAL_KEY='revisio-v3-local-chapters';
 let publishedIds=new Set();
@@ -60,6 +60,21 @@ function validChapter(c){
   if(q.type==='text'&&!['number','string'].includes(typeof q.solution))throw Error('Réponse incorrecte');
  }
  if(Math.abs(score-20)>1e-8)throw Error('Le barème doit faire exactement 20 points, trouvé : '+score);
+ if(c.evaluationQuestions!==undefined){
+  if(!Array.isArray(c.evaluationQuestions)||c.evaluationQuestions.length<5||c.evaluationQuestions.length>60)throw Error('Banque évaluation incorrecte');
+  let total=0;const used=new Set();
+  for(const q of c.evaluationQuestions){
+   if(!Number.isInteger(q.id)||used.has(q.id)||ids.has(q.id)||!kinds.includes(q.type)||typeof q.prompt!=='string'||!q.prompt.trim()||typeof q.topic!=='string'||!q.topic.trim()||typeof q.explanation!=='string'||!q.explanation.trim()||!Number.isFinite(q.weight)||q.weight<=0)throw Error('Question évaluation incorrecte');
+   used.add(q.id);total+=q.weight;
+   if(['single','multi'].includes(q.type)&&(!Array.isArray(q.options)||q.options.length<2))throw Error('Options évaluation manquantes');
+   if(q.type==='single'&&!q.options.includes(q.solution))throw Error('Réponse évaluation absente des options');
+   if(q.type==='multi'&&(!Array.isArray(q.solution)||q.solution.some(x=>!q.options.includes(x))))throw Error('Réponses multiples évaluation incorrectes');
+   if(q.type==='pair'&&(!Array.isArray(q.solution)||q.solution.length!==2||!Array.isArray(q.labels)||q.labels.length!==2))throw Error('Paire évaluation incorrecte');
+   if(q.type==='factor'&&(typeof q.solution!=='number'||typeof q.displaySolution!=='string'))throw Error('Factorisation évaluation incorrecte');
+   if(q.type==='text'&&!['number','string'].includes(typeof q.solution))throw Error('Réponse texte évaluation incorrecte');
+  }
+  if(Math.abs(total-20)>1e-8)throw Error('Barème évaluation différent de 20');
+ }
  return c;
 }
 function saveLocals(){localStorage.setItem(LOCAL_KEY,JSON.stringify(COURSES.filter(c=>!publishedIds.has(c.id))))}
@@ -97,7 +112,9 @@ async function boot(){
 
 const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr').replace(/[’']/g,' ').replace(/[^\p{L}\p{N} ]/gu,' ').replace(/\s+/g,' ').trim();
-const current=()=>COURSES.find(c=>c.id===S.course);const qs=()=>current().questions;
+const current=()=>COURSES.find(c=>c.id===S.course);
+const qs=()=>{const c=current(),bank=S.mode==='evaluation'&&Array.isArray(c.evaluationQuestions)?c.evaluationQuestions:c.questions;return S.mode==='evaluation'&&Array.isArray(S.order)?S.order.map(id=>bank.find(q=>q.id===id)).filter(Boolean):bank};
+function shuffledIds(bank){const ids=bank.map(q=>q.id);for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]]}return ids}
 function isPrime(x){if(!Number.isInteger(x)||x<2)return false;for(let n=2;n*n<=x;n++)if(x%n===0)return false;return true}
 function factorNumber(s){s=String(s??'').replace(/^\s*\d+\s*=/,'').replace(/\s/g,'').replace(/[×·∙*xX]/g,'*');const supers={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};s=s.replace(/(\d)([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g,(_,a,b)=>a+'^'+Array.from(b,x=>supers[x]).join(''));if(!/^\d+(\^\d+)?(\*\d+(\^\d+)?)*$/.test(s))return null;let total=1;for(let token of s.split('*')){const [v,p=1]=token.split('^').map(Number);if(!isPrime(v)||p<1||p>14)return null;total*=Math.pow(v,p);if(total>10000000)return null}return total}
 function assessment(q,a){if(q.type==='manual'){if(!String(a??'').trim())return {kind:'blank',points:0};const grade=S.grades[q.id];return grade===1?{kind:'correct',points:q.weight}:grade===0?{kind:'wrong',points:0}:{kind:'pending',points:0}}
@@ -166,10 +183,10 @@ function openLesson(id){
  if(!COURSES.some(c=>c.id===id))return home();
  S.course=id;nav.view='setup';
  const c=current(),pts=c.questions.reduce((a,q)=>a+q.weight,0);
- app.innerHTML='<div class="appbar"><button class="back-link" id="back-library" type="button">← Bibliothèque</button><span class="pill">'+esc(c.level)+'</span></div><div class="body"><section class="panel setup-panel"><div class="label">'+esc(subjectTitle(c.subject))+'</div><h1 class="title">'+esc(c.name)+'</h1><div class="note">'+c.questions.length+' questions · '+pts+' points · '+esc(c.level)+'</div><h2 class="setup-heading">Comment veux-tu travailler ?</h2><div class="grid"><button class="mode '+(S.mode==='training'?'active':'')+'" data-mode="training" type="button"><strong>📘 Entraînement</strong><small>Correction après chaque réponse.</small></button><button class="mode '+(S.mode==='evaluation'?'active':'')+'" data-mode="evaluation" type="button"><strong>📝 Évaluation</strong><small>Contrôle noté, sans correction avant la fin.</small></button></div><div class="actions"><button class="btn" id="start-lesson" type="button">Commencer →</button></div></section></div>';
+ app.innerHTML='<div class="appbar"><button class="back-link" id="back-library" type="button">← Bibliothèque</button><span class="pill">'+esc(c.level)+'</span></div><div class="body"><section class="panel setup-panel"><div class="label">'+esc(subjectTitle(c.subject))+'</div><h1 class="title">'+esc(c.name)+'</h1><div class="note">'+(S.mode==='evaluation'&&c.evaluationQuestions?c.evaluationQuestions.length:c.questions.length)+' questions · '+pts+' points · '+esc(c.level)+(S.mode==='evaluation'?' · Sujet inédit, ordre varié':' · Correction immédiate')+'</div><h2 class="setup-heading">Comment veux-tu travailler ?</h2><div class="grid"><button class="mode '+(S.mode==='training'?'active':'')+'" data-mode="training" type="button"><strong>📘 Entraînement</strong><small>Apprendre avec les corrections immédiates.</small></button><button class="mode '+(S.mode==='evaluation'?'active':'')+'" data-mode="evaluation" type="button"><strong>📝 Évaluation</strong><small>Autres questions, ordre varié, sans aide.</small></button></div><div class="actions"><button class="btn" id="start-lesson" type="button">Commencer →</button></div></section></div>';
  app.querySelector('#back-library').onclick=home;
  app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{S.mode=b.dataset.mode;openLesson(id)});
- app.querySelector('#start-lesson').onclick=()=>{saveNav(S.course);S.index=0;S.answers={};S.grades={};S.verified={};S.screen='quiz';quiz()};
+ app.querySelector('#start-lesson').onclick=()=>{saveNav(S.course);S.index=0;S.answers={};S.grades={};S.verified={};S.order=S.mode==='evaluation'?shuffledIds(c.evaluationQuestions||c.questions):null;S.screen='quiz';quiz()};
 }
 function info(){}
 function input(q){let a=S.answers[q.id];if(q.type==='single'||q.type==='multi')return (q.options||[]).map(o=>`<label class="answeroption"><input name="option" type="${q.type==='multi'?'checkbox':'radio'}" value="${esc(o)}" ${q.type==='multi'?Array.isArray(a)&&a.includes(o)?'checked':'':a===o?'checked':''}><span>${esc(o)}</span></label>`).join('');if(q.type==='pair')return q.labels.map((label,i)=>`<label class="formlabel" for="p${i}">${esc(label)}</label><input id="p${i}" inputmode="numeric" class="control" value="${esc(Array.isArray(a)?a[i]:'')}" placeholder="Nombre entier">`).join('');if(q.type==='manual')return `<label class="formlabel" for="free">Ta justification</label><textarea class="control" id="free" rows="4" placeholder="Explique avec tes mots…">${esc(a||'')}</textarea>`;return `<label class="formlabel" for="answer">Ta réponse</label><input class="control" id="answer" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(a||'')}" placeholder="Écris ici ta réponse">${q.type==='factor'?'<p class="muted">Utilise × ou * pour multiplier, et ^ pour les puissances. Ex. : 2^2 × 3.</p>':''}`}
