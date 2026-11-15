@@ -46,3 +46,18 @@ Types pris en charge : `single`, `multi`, `text`, `manual`, `pair`, `factor`. Le
 
 ## Limites de la V3.1
 Pas d'IA intégrée au site, pas d'analyse de photo automatique, pas d'authentification, pas de synchronisation des résultats entre appareils. GitHub Pages et ce dépôt sont publics ; aucun nom, photo de cahier nominative, note individuelle ou information sensible ne doit être publié dans `chapitres.json`.
+
+
+## V3.1 — Évaluations distinctes de l'entraînement
+
+Chaque chapitre peut contenir deux banques distinctes :
+- `questions` : entraînement (correction immédiate)
+- `evaluationQuestions` : contrôle inédit (sans correction avant le bilan ; ordre des questions mélangé à chaque séance)
+
+Chaque banque est notée indépendamment sur 20 points. Les questions ont des identifiants distincts entre banques.
+Le moteur de notation, la validation parentale et les bilans sont communs, mais la série de questions affichée dépend du mode choisi.
+Pour un nouveau cours, préparer les **deux banques**, avec exercices différents sur les mêmes compétences, et vérifier chaque corrigé et chaque barème.
+La validation d'un chapitre est refusée si les identifiants se chevauchent ou si une banque ne totalise pas exactement 20 points.
+Cette version possède 100 questions d'entraînement et 75 questions d'évaluation, sur 5 chapitres.
+
+Les évaluations ne sont pas générées à la volée par une IA : ce sont des sujets prévalidés. Le mélange de l'ordre ne doit pas être confondu avec une nouvelle génération d'exercices.
