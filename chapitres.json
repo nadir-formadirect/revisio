@@ -361,10 +361,10 @@
         {
           "id": 106,
           "topic": "Critères de divisibilité",
-          "prompt": "Complète 6□3 pour que le nombre soit divisible par 9. Quel chiffre manque ?",
+          "prompt": "Complète 6□3 pour que le nombre soit divisible par 9. Quel est le plus petit chiffre possible ?",
           "type": "text",
           "solution": "0",
-          "explanation": "6 + 0 + 3 = 9. Le seul chiffre possible est 0.",
+          "explanation": "La somme vaut 9 + □. Les chiffres 0 et 9 conviennent, mais le plus petit est 0.",
           "weight": 1
         },
         {
@@ -762,14 +762,15 @@
         {
           "id": 101,
           "topic": "Vocabulaire",
-          "prompt": "Traduis « un accent » en espagnol.",
-          "type": "text",
-          "solution": "un acento",
-          "explanation": "« Un acento » désigne un accent.",
+          "prompt": "Dans « Mi profesora tiene un acento », quel est le sens du mot « acento » ?",
+          "type": "single",
+          "solution": "accent",
+          "explanation": "Un acento signifie un accent. Le mot est utilisé ici dans une phrase nouvelle.",
           "weight": 1,
-          "accepted": [
-            "acento",
-            "un acento"
+          "options": [
+            "accent",
+            "langue",
+            "livre"
           ]
         },
         {
