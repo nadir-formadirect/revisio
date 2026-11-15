@@ -279,6 +279,201 @@
           "solution": "La somme des chiffres de 84 est 8 + 4 = 12, qui n’est pas divisible par 9. Donc 84 n’est pas divisible par 9.",
           "explanation": "Pour partager tous les jetons en 9 pochettes, les quantités de chaque couleur doivent être divisibles par 9."
         }
+      ],
+      "evaluationQuestions": [
+        {
+          "id": 101,
+          "topic": "Division euclidienne",
+          "prompt": "Calcule la division euclidienne de 173 par 8.",
+          "type": "pair",
+          "solution": [
+            21,
+            5
+          ],
+          "explanation": "173 = 8 × 21 + 5 ; 5 est inférieur à 8.",
+          "weight": 1,
+          "labels": [
+            "Quotient",
+            "Reste"
+          ]
+        },
+        {
+          "id": 102,
+          "topic": "Division euclidienne",
+          "prompt": "Quel est le reste de 248 divisé par 11 ?",
+          "type": "text",
+          "solution": 6,
+          "explanation": "11 × 22 = 242, donc 248 = 11 × 22 + 6.",
+          "weight": 1
+        },
+        {
+          "id": 103,
+          "topic": "Division euclidienne",
+          "prompt": "Laquelle de ces égalités décrit une division euclidienne de 65 par 6 ?",
+          "type": "single",
+          "solution": "65 = 6 × 10 + 5",
+          "explanation": "Le reste est 5, compris entre 0 et 5.",
+          "weight": 1,
+          "options": [
+            "65 = 6 × 9 + 11",
+            "65 = 6 × 10 + 5",
+            "65 = 6 × 11 − 1"
+          ]
+        },
+        {
+          "id": 104,
+          "topic": "Critères de divisibilité",
+          "prompt": "Pour vérifier la divisibilité par 9 de 7 236, quel calcul est utile ?",
+          "type": "single",
+          "solution": "7 + 2 + 3 + 6",
+          "explanation": "La somme des chiffres vaut 18, divisible par 9.",
+          "weight": 1,
+          "options": [
+            "7 + 2 + 3 + 6",
+            "36 ÷ 9",
+            "7 × 2 × 3 × 6"
+          ]
+        },
+        {
+          "id": 105,
+          "topic": "Critères de divisibilité",
+          "prompt": "Par lesquels de ces nombres 1 440 est-il divisible ?",
+          "type": "multi",
+          "solution": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "9",
+            "10"
+          ],
+          "explanation": "1 440 finit par 0, ses deux derniers chiffres sont 40 et 1+4+4+0=9.",
+          "weight": 1,
+          "options": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "9",
+            "10"
+          ]
+        },
+        {
+          "id": 106,
+          "topic": "Critères de divisibilité",
+          "prompt": "Complète 6□3 pour que le nombre soit divisible par 9. Quel chiffre manque ?",
+          "type": "text",
+          "solution": "0",
+          "explanation": "6 + 0 + 3 = 9. Le seul chiffre possible est 0.",
+          "weight": 1
+        },
+        {
+          "id": 107,
+          "topic": "Nombres premiers",
+          "prompt": "Parmi ces entiers, lequel est premier ?",
+          "type": "single",
+          "solution": "43",
+          "explanation": "43 n'a aucun diviseur parmi 2, 3 et 5 ; 39=3×13, 49=7², 51=3×17.",
+          "weight": 1,
+          "options": [
+            "39",
+            "43",
+            "49",
+            "51"
+          ]
+        },
+        {
+          "id": 108,
+          "topic": "Nombres premiers",
+          "prompt": "Pourquoi 77 n'est-il pas premier ?",
+          "type": "single",
+          "solution": "77 = 7 × 11",
+          "explanation": "7 et 11 divisent 77 : il a d'autres diviseurs que 1 et lui-même.",
+          "weight": 1,
+          "options": [
+            "77 est impair",
+            "77 = 7 × 11",
+            "77 se termine par 7"
+          ]
+        },
+        {
+          "id": 109,
+          "topic": "Facteurs premiers",
+          "prompt": "Décompose 90 en facteurs premiers.",
+          "type": "factor",
+          "solution": 90,
+          "explanation": "90 = 2 × 45 = 2 × 3 × 15 = 2 × 3² × 5.",
+          "weight": 1,
+          "displaySolution": "2 × 3² × 5"
+        },
+        {
+          "id": 110,
+          "topic": "Facteurs premiers",
+          "prompt": "Décompose 84 en facteurs premiers.",
+          "type": "factor",
+          "solution": 84,
+          "explanation": "84 = 2 × 42 = 2² × 21 = 2² × 3 × 7.",
+          "weight": 1,
+          "displaySolution": "2² × 3 × 7"
+        },
+        {
+          "id": 111,
+          "topic": "Problèmes",
+          "prompt": "Une association range 95 chaises sur des rangées de 8. Combien de rangées complètes peut-elle faire ?",
+          "type": "text",
+          "solution": 11,
+          "explanation": "95 = 8 × 11 + 7. Elle fait 11 rangées complètes.",
+          "weight": 2
+        },
+        {
+          "id": 112,
+          "topic": "Problèmes",
+          "prompt": "Avec les mêmes 95 chaises et 8 chaises maximum par rangée, combien de rangées faut-il au minimum pour placer tout le monde ?",
+          "type": "text",
+          "solution": 12,
+          "explanation": "11 rangées complètes accueillent 88 chaises ; la 12e accueille les 7 restantes.",
+          "weight": 2
+        },
+        {
+          "id": 113,
+          "topic": "Multiples et diviseurs",
+          "prompt": "On partage exactement 96 cartes entre 6 élèves. Combien de cartes reçoit chacun et combien en reste-t-il ?",
+          "type": "pair",
+          "solution": [
+            16,
+            0
+          ],
+          "explanation": "96 = 6 × 16 ; aucun reste.",
+          "weight": 2,
+          "labels": [
+            "Cartes par élève",
+            "Reste"
+          ]
+        },
+        {
+          "id": 114,
+          "topic": "Multiples et diviseurs",
+          "prompt": "Le nombre 7 est-il diviseur de 98 ?",
+          "type": "single",
+          "solution": "Oui, car 98 = 7 × 14",
+          "explanation": "Un nombre est diviseur s'il multiplie un entier pour donner l'autre.",
+          "weight": 2,
+          "options": [
+            "Oui, car 98 = 7 × 14",
+            "Non, car 98 est pair",
+            "Oui, car 7 est premier"
+          ]
+        },
+        {
+          "id": 115,
+          "topic": "Problèmes",
+          "prompt": "Un camarade écrit « 57 = 5 × 10 + 7 » et dit que c'est la division euclidienne de 57 par 5. Explique et corrige son raisonnement.",
+          "type": "manual",
+          "solution": "Cette égalité est vraie, mais 7 est trop grand pour être un reste avec un diviseur de 5. Il faut écrire 57 = 5 × 11 + 2.",
+          "explanation": "Le reste doit être strictement inférieur au diviseur : ici le quotient est 11 et le reste 2.",
+          "weight": 2,
+          "example": "Cette égalité est vraie, mais 7 est trop grand pour être un reste avec un diviseur de 5. Il faut écrire 57 = 5 × 11 + 2."
+        }
       ]
     },
     {
@@ -562,6 +757,172 @@
           "explanation": "Avec « mon frère et moi », le verbe est au pluriel : tenemos.",
           "weight": 1
         }
+      ],
+      "evaluationQuestions": [
+        {
+          "id": 101,
+          "topic": "Vocabulaire",
+          "prompt": "Traduis « un accent » en espagnol.",
+          "type": "text",
+          "solution": "un acento",
+          "explanation": "« Un acento » désigne un accent.",
+          "weight": 1,
+          "accepted": [
+            "acento",
+            "un acento"
+          ]
+        },
+        {
+          "id": 102,
+          "topic": "Vocabulaire",
+          "prompt": "Une personne qui parle espagnol est…",
+          "type": "single",
+          "solution": "un hispanohablante",
+          "explanation": "Un hispanohablante est un hispanophone.",
+          "weight": 1,
+          "options": [
+            "un hispanohablante",
+            "un diccionario",
+            "un idioma"
+          ]
+        },
+        {
+          "id": 103,
+          "topic": "Vocabulaire",
+          "prompt": "Quel est le verbe espagnol qui signifie « apprendre » ?",
+          "type": "text",
+          "solution": "aprender",
+          "explanation": "Aprender signifie apprendre.",
+          "weight": 1
+        },
+        {
+          "id": 104,
+          "topic": "Vocabulaire",
+          "prompt": "Quelle expression signifie « on parle espagnol » ?",
+          "type": "single",
+          "solution": "Se habla español",
+          "explanation": "« Se habla español » = « on parle espagnol ».",
+          "weight": 1,
+          "options": [
+            "Se aprende un idioma",
+            "Se habla español",
+            "Tengo un acento"
+          ]
+        },
+        {
+          "id": 105,
+          "topic": "Conjugaison",
+          "prompt": "Complète : Yo ___ dos libros. (tener)",
+          "type": "text",
+          "solution": "tengo",
+          "explanation": "À la première personne du singulier : tengo.",
+          "weight": 1
+        },
+        {
+          "id": 106,
+          "topic": "Conjugaison",
+          "prompt": "Complète : Tú ___ un diccionario. (tener)",
+          "type": "text",
+          "solution": "tienes",
+          "explanation": "Tú tienes : tu as.",
+          "weight": 1
+        },
+        {
+          "id": 107,
+          "topic": "Conjugaison",
+          "prompt": "Complète : Mi profesora ___ un acento. (tener)",
+          "type": "text",
+          "solution": "tiene",
+          "explanation": "Mi profesora = ella ; ella tiene.",
+          "weight": 1
+        },
+        {
+          "id": 108,
+          "topic": "Conjugaison",
+          "prompt": "Complète : Mi amigo y yo ___ un libro. (tener)",
+          "type": "text",
+          "solution": "tenemos",
+          "explanation": "Mi amigo y yo = nosotros, donc tenemos.",
+          "weight": 1
+        },
+        {
+          "id": 109,
+          "topic": "Conjugaison",
+          "prompt": "Complète : Vosotros ___ una clase. (tener)",
+          "type": "text",
+          "solution": "tenéis",
+          "explanation": "Avec vosotros : tenéis, avec un accent sur é.",
+          "weight": 1,
+          "accepted": [
+            "tenéis",
+            "teneis"
+          ]
+        },
+        {
+          "id": 110,
+          "topic": "Conjugaison",
+          "prompt": "Complète : Mis amigos ___ dos libros. (tener)",
+          "type": "text",
+          "solution": "tienen",
+          "explanation": "Mis amigos = ellos ; ellos tienen.",
+          "weight": 1
+        },
+        {
+          "id": 111,
+          "topic": "Application",
+          "prompt": "Quelle phrase est correctement construite pour dire « J'ai douze ans » ?",
+          "type": "single",
+          "solution": "Tengo doce años",
+          "explanation": "Pour dire son âge en espagnol, on utilise tener avec yo : tengo.",
+          "weight": 2,
+          "options": [
+            "Tiene doce años",
+            "Tengo doce años",
+            "Tienes doce años"
+          ]
+        },
+        {
+          "id": 112,
+          "topic": "Application",
+          "prompt": "« Mi hermana y yo » désigne quel pronom ?",
+          "type": "single",
+          "solution": "Nosotros / nosotras",
+          "explanation": "Ma sœur et moi = nous : nosotros ou nosotras suivant les personnes concernées.",
+          "weight": 2,
+          "options": [
+            "Ellos",
+            "Nosotros / nosotras",
+            "Vosotros"
+          ]
+        },
+        {
+          "id": 113,
+          "topic": "Application",
+          "prompt": "Corrige uniquement le verbe : « Ellos tiene un idioma ».",
+          "type": "text",
+          "solution": "tienen",
+          "explanation": "Ellos est la troisième personne du pluriel : tienen.",
+          "weight": 2
+        },
+        {
+          "id": 114,
+          "topic": "Application",
+          "prompt": "Dans « Ana y Pablo ___ dos idiomas », écris la bonne forme de tener.",
+          "type": "text",
+          "solution": "tienen",
+          "explanation": "Ana y Pablo = ellos, donc tienen.",
+          "weight": 2
+        },
+        {
+          "id": 115,
+          "topic": "Application",
+          "prompt": "Explique pourquoi « Tú tengo un libro » est incorrect et donne la correction.",
+          "type": "manual",
+          "solution": "Tú correspond à la deuxième personne du singulier ; il faut dire « Tú tienes un libro ».",
+          "explanation": "Tú se conjugue avec tienes, et non tengo (forme de yo).",
+          "weight": 2,
+          "example": "Tú correspond à la deuxième personne du singulier ; il faut dire « Tú tienes un libro »."
+        }
       ]
     },
     {
@@ -781,6 +1142,179 @@
           "options": null,
           "explanation": "On accompagne un jour précis (Friday), même si une partie de la journée est mentionnée.",
           "weight": 1
+        }
+      ],
+      "evaluationQuestions": [
+        {
+          "id": 101,
+          "topic": "Jours et dates",
+          "prompt": "Complete: The school trip is ___ Wednesday.",
+          "type": "single",
+          "solution": "on",
+          "explanation": "On s'utilise devant un jour précis.",
+          "weight": 1,
+          "options": [
+            "at",
+            "in",
+            "on"
+          ]
+        },
+        {
+          "id": 102,
+          "topic": "Jours et dates",
+          "prompt": "Complete: We have a test ___ March 18th.",
+          "type": "text",
+          "solution": "on",
+          "explanation": "On s'utilise devant une date précise.",
+          "weight": 1
+        },
+        {
+          "id": 103,
+          "topic": "Heures",
+          "prompt": "Complete: The lesson starts ___ 8:45.",
+          "type": "single",
+          "solution": "at",
+          "explanation": "At s'utilise devant une heure précise.",
+          "weight": 1,
+          "options": [
+            "on",
+            "at",
+            "in"
+          ]
+        },
+        {
+          "id": 104,
+          "topic": "Heures",
+          "prompt": "Complete: The concert ends ___ 6 o'clock.",
+          "type": "text",
+          "solution": "at",
+          "explanation": "At précède les heures.",
+          "weight": 1
+        },
+        {
+          "id": 105,
+          "topic": "Mois et saisons",
+          "prompt": "Complete: The sports day takes place ___ June.",
+          "type": "single",
+          "solution": "in",
+          "explanation": "In s'utilise devant le nom d'un mois.",
+          "weight": 1,
+          "options": [
+            "on",
+            "at",
+            "in"
+          ]
+        },
+        {
+          "id": 106,
+          "topic": "Mois et saisons",
+          "prompt": "Complete: We study ___ the afternoon.",
+          "type": "text",
+          "solution": "in",
+          "explanation": "In the afternoon : moment de la journée.",
+          "weight": 1
+        },
+        {
+          "id": 107,
+          "topic": "Mois et saisons",
+          "prompt": "Complete: The school year begins ___ autumn.",
+          "type": "single",
+          "solution": "in",
+          "explanation": "In s'utilise devant les saisons.",
+          "weight": 1,
+          "options": [
+            "at",
+            "in",
+            "on"
+          ]
+        },
+        {
+          "id": 108,
+          "topic": "Jours et dates",
+          "prompt": "Complete: The club meets ___ Monday morning.",
+          "type": "text",
+          "solution": "on",
+          "explanation": "Un jour précis avec un moment de la journée prend on.",
+          "weight": 1
+        },
+        {
+          "id": 109,
+          "topic": "Dates britanniques et américaines",
+          "prompt": "Quelle écriture suit l'ordre britannique « jour puis mois » ?",
+          "type": "single",
+          "solution": "14th February",
+          "explanation": "En anglais britannique, on peut écrire 14th February.",
+          "weight": 1,
+          "options": [
+            "February 14th",
+            "14th February",
+            "in February 14th"
+          ]
+        },
+        {
+          "id": 110,
+          "topic": "Dates britanniques et américaines",
+          "prompt": "Quelle écriture suit l'ordre américain « mois puis jour » ?",
+          "type": "single",
+          "solution": "October 3rd",
+          "explanation": "Aux États-Unis, on écrit couramment October 3rd.",
+          "weight": 1,
+          "options": [
+            "3rd October",
+            "October 3rd",
+            "at October 3rd"
+          ]
+        },
+        {
+          "id": 111,
+          "topic": "Correction d’erreurs",
+          "prompt": "Corrige la préposition dans « in Thursday afternoon ».",
+          "type": "text",
+          "solution": "on",
+          "explanation": "On Thursday afternoon : jour précis suivi d'une partie de journée.",
+          "weight": 2
+        },
+        {
+          "id": 112,
+          "topic": "Correction d’erreurs",
+          "prompt": "Corrige la préposition dans « on 10:30 ».",
+          "type": "text",
+          "solution": "at",
+          "explanation": "At 10:30 : une heure précise.",
+          "weight": 2
+        },
+        {
+          "id": 113,
+          "topic": "Application : school events",
+          "prompt": "Affiche : « Drama club — Tuesday, September 22nd — 4:15 ». Quelle phrase est correcte ?",
+          "type": "single",
+          "solution": "The club is on Tuesday at 4:15.",
+          "explanation": "On s'utilise devant Tuesday ; at devant 4:15.",
+          "weight": 2,
+          "options": [
+            "The club is in Tuesday at 4:15.",
+            "The club is on Tuesday at 4:15.",
+            "The club is at Tuesday on 4:15."
+          ]
+        },
+        {
+          "id": 114,
+          "topic": "Application : school events",
+          "prompt": "Complète : The festival is ___ 2026.",
+          "type": "text",
+          "solution": "in",
+          "explanation": "In précède les années.",
+          "weight": 2
+        },
+        {
+          "id": 115,
+          "topic": "Compréhension",
+          "prompt": "Explique pourquoi on écrit « in the morning » mais « on Saturday morning ».",
+          "type": "manual",
+          "solution": "In s'emploie avec un moment de la journée en général ; on s'emploie lorsque le jour précis Saturday est indiqué.",
+          "explanation": "Le jour précis détermine l'emploi de on dans on Saturday morning.",
+          "weight": 2,
+          "example": "In s'emploie avec un moment de la journée en général ; on s'emploie lorsque le jour précis Saturday est indiqué."
         }
       ]
     },
@@ -1067,6 +1601,212 @@
           "weight": 1,
           "example": "Je choisis lecture seule : les autres pourront lire le document sans pouvoir le modifier."
         }
+      ],
+      "evaluationQuestions": [
+        {
+          "id": 101,
+          "topic": "Arborescence",
+          "prompt": "Un fichier se trouve dans « Collège → 5e B → SVT ». Quel est son dossier parent immédiat ?",
+          "type": "single",
+          "solution": "SVT",
+          "explanation": "Le dossier directement contenant le fichier est SVT.",
+          "weight": 1,
+          "options": [
+            "Collège",
+            "SVT",
+            "5e B"
+          ]
+        },
+        {
+          "id": 102,
+          "topic": "Arborescence",
+          "prompt": "Quel chemin est correct pour ouvrir « volcan.jpg », dans Sciences puis Photos à l'intérieur du dossier Collège ?",
+          "type": "single",
+          "solution": "Collège → Sciences → Photos → volcan.jpg",
+          "explanation": "On suit les dossiers du plus général au plus précis.",
+          "weight": 1,
+          "options": [
+            "Collège → Sciences → Photos → volcan.jpg",
+            "volcan.jpg → Photos → Collège",
+            "Sciences → Collège → volcan.jpg"
+          ]
+        },
+        {
+          "id": 103,
+          "topic": "Arborescence",
+          "prompt": "Tu veux ranger trois images d'un projet. Quelle organisation est la plus logique ?",
+          "type": "single",
+          "solution": "Créer un sous-dossier Images dans le dossier Projet",
+          "explanation": "Un sous-dossier regroupe des fichiers de même usage.",
+          "weight": 1,
+          "options": [
+            "Mettre toutes les images dans la corbeille",
+            "Créer un sous-dossier Images dans le dossier Projet",
+            "Renommer toutes les images document.pdf"
+          ]
+        },
+        {
+          "id": 104,
+          "topic": "Taille des fichiers",
+          "prompt": "Quelle unité est la plus grande ?",
+          "type": "single",
+          "solution": "Go",
+          "explanation": "Dans le cours : Ko < Mo < Go.",
+          "weight": 1,
+          "options": [
+            "Ko",
+            "Mo",
+            "Go"
+          ]
+        },
+        {
+          "id": 105,
+          "topic": "Taille des fichiers",
+          "prompt": "Combien de Ko font 3 Mo selon le tableau du cours ?",
+          "type": "text",
+          "solution": "3000",
+          "explanation": "1 Mo = 1 000 Ko, donc 3 Mo = 3 000 Ko.",
+          "weight": 1,
+          "accepted": [
+            "3000",
+            "3 000"
+          ]
+        },
+        {
+          "id": 106,
+          "topic": "Taille des fichiers",
+          "prompt": "Un fichier de 800 Ko et un fichier de 2 Mo : lequel occupe plus de place ?",
+          "type": "single",
+          "solution": "2 Mo",
+          "explanation": "2 Mo = 2 000 Ko, supérieur à 800 Ko.",
+          "weight": 1,
+          "options": [
+            "800 Ko",
+            "2 Mo",
+            "Même taille"
+          ]
+        },
+        {
+          "id": 107,
+          "topic": "Taille des fichiers",
+          "prompt": "Combien d'octets font 2 Ko selon le cours ?",
+          "type": "text",
+          "solution": "2000",
+          "explanation": "1 Ko = 1 000 octets, donc 2 Ko = 2 000 octets.",
+          "weight": 1,
+          "accepted": [
+            "2000",
+            "2 000"
+          ]
+        },
+        {
+          "id": 108,
+          "topic": "Extensions et types",
+          "prompt": "« affiche.png » est principalement un fichier…",
+          "type": "single",
+          "solution": "image",
+          "explanation": "L'extension .png correspond à une image.",
+          "weight": 1,
+          "options": [
+            "audio",
+            "image",
+            "tableur"
+          ]
+        },
+        {
+          "id": 109,
+          "topic": "Extensions et types",
+          "prompt": "« tableau.xlsx » est un fichier…",
+          "type": "single",
+          "solution": "tableur",
+          "explanation": "L'extension .xlsx est utilisée pour un tableur.",
+          "weight": 1,
+          "options": [
+            "tableur",
+            "vidéo",
+            "audio"
+          ]
+        },
+        {
+          "id": 110,
+          "topic": "Extensions et types",
+          "prompt": "« montage.mp4 » est généralement un fichier…",
+          "type": "single",
+          "solution": "vidéo",
+          "explanation": "L'extension .mp4 désigne une vidéo.",
+          "weight": 1,
+          "options": [
+            "document texte",
+            "vidéo",
+            "archive"
+          ]
+        },
+        {
+          "id": 111,
+          "topic": "Extensions et types",
+          "prompt": "Quel fichier est le plus adapté pour partager un document PDF ?",
+          "type": "single",
+          "solution": "fiche.pdf",
+          "explanation": "Le type du fichier est indiqué par son extension .pdf.",
+          "weight": 2,
+          "options": [
+            "fiche.mp3",
+            "fiche.pdf",
+            "fiche.jpg"
+          ]
+        },
+        {
+          "id": 112,
+          "topic": "Extensions et types",
+          "prompt": "Quelle extension correspond à une archive compressée ?",
+          "type": "single",
+          "solution": ".7z",
+          "explanation": "Le cours cite .7z parmi les fichiers compressés.",
+          "weight": 2,
+          "options": [
+            ".odt",
+            ".7z",
+            ".wav"
+          ]
+        },
+        {
+          "id": 113,
+          "topic": "Droits d'accès",
+          "prompt": "Tu partages une fiche que tes camarades doivent consulter sans changer son contenu. Quel accès choisis-tu ?",
+          "type": "single",
+          "solution": "Lecture seule",
+          "explanation": "Lecture seule autorise la consultation, mais pas la modification.",
+          "weight": 2,
+          "options": [
+            "Lecture et écriture",
+            "Lecture seule",
+            "Modification obligatoire"
+          ]
+        },
+        {
+          "id": 114,
+          "topic": "Droits d'accès",
+          "prompt": "Pour qu'un camarade corrige le texte d'un document partagé, quel droit faut-il lui accorder ?",
+          "type": "single",
+          "solution": "Lecture et écriture",
+          "explanation": "La modification nécessite les droits de lecture et d'écriture.",
+          "weight": 2,
+          "options": [
+            "Lecture seule",
+            "Lecture et écriture",
+            "Aucun droit"
+          ]
+        },
+        {
+          "id": 115,
+          "topic": "Droits d'accès",
+          "prompt": "Explique la différence entre « lecture seule » et « lecture et écriture », avec un exemple de travail en groupe.",
+          "type": "manual",
+          "solution": "En lecture seule, un camarade peut consulter le document mais pas le modifier ; en lecture et écriture, il peut le consulter et le modifier.",
+          "explanation": "La différence essentielle concerne l'autorisation de modifier le fichier.",
+          "weight": 2,
+          "example": "En lecture seule, un camarade peut consulter le document mais pas le modifier ; en lecture et écriture, il peut le consulter et le modifier."
+        }
       ]
     },
     {
@@ -1290,6 +2030,173 @@
           "options": null,
           "explanation": "Pour ellos/ellas, llamarse donne se llaman. « Se llama » convient à él/ella, pas à ellos.",
           "weight": 1
+        }
+      ],
+      "evaluationQuestions": [
+        {
+          "id": 101,
+          "topic": "Comprendre les groupes",
+          "prompt": "À quel groupe appartient « estudiar » ?",
+          "type": "single",
+          "solution": "-ar",
+          "explanation": "Estudiar se termine en -ar ; c'est la même famille de terminaisons que hablar.",
+          "weight": 1,
+          "options": [
+            "-ir",
+            "-er",
+            "-ar"
+          ]
+        },
+        {
+          "id": 102,
+          "topic": "Comprendre les groupes",
+          "prompt": "Quel infinitif appartient au même groupe que « comer » ?",
+          "type": "single",
+          "solution": "beber",
+          "explanation": "Beber se termine en -er, comme comer.",
+          "weight": 1,
+          "options": [
+            "vivir",
+            "hablar",
+            "beber"
+          ]
+        },
+        {
+          "id": 103,
+          "topic": "Comprendre les groupes",
+          "prompt": "Quelle terminaison prend « nosotros » avec un verbe régulier en -ir ?",
+          "type": "single",
+          "solution": "-imos",
+          "explanation": "Comme vivimos : nous + verbe en -ir se termine en -imos.",
+          "weight": 1,
+          "options": [
+            "-amos",
+            "-emos",
+            "-imos"
+          ]
+        },
+        {
+          "id": 104,
+          "topic": "Hablar (-ar)",
+          "prompt": "Complète : Mis padres ___ español. (hablar)",
+          "type": "text",
+          "solution": "hablan",
+          "explanation": "Mis padres = ellos : hablan.",
+          "weight": 1
+        },
+        {
+          "id": 105,
+          "topic": "Hablar (-ar)",
+          "prompt": "Complète : Yo ___ con mi amigo. (hablar)",
+          "type": "text",
+          "solution": "hablo",
+          "explanation": "Yo hablo : première personne du singulier.",
+          "weight": 1
+        },
+        {
+          "id": 106,
+          "topic": "Hablar (-ar)",
+          "prompt": "Complète : Vosotros ___ español. (hablar)",
+          "type": "text",
+          "solution": "habláis",
+          "explanation": "Vosotros habláis, terminaison -áis avec un accent.",
+          "weight": 1,
+          "accepted": [
+            "habláis",
+            "hablais"
+          ]
+        },
+        {
+          "id": 107,
+          "topic": "Comer (-er)",
+          "prompt": "Complète : Él ___ pan. (comer)",
+          "type": "text",
+          "solution": "come",
+          "explanation": "Él come : 3e personne du singulier.",
+          "weight": 1
+        },
+        {
+          "id": 108,
+          "topic": "Comer (-er)",
+          "prompt": "Complète : Ellas ___ en casa. (comer)",
+          "type": "text",
+          "solution": "comen",
+          "explanation": "Ellas comen : 3e personne du pluriel.",
+          "weight": 1
+        },
+        {
+          "id": 109,
+          "topic": "Vivir (-ir)",
+          "prompt": "Complète : Ella ___ en Madrid. (vivir)",
+          "type": "text",
+          "solution": "vive",
+          "explanation": "Ella vive : 3e personne du singulier.",
+          "weight": 1
+        },
+        {
+          "id": 110,
+          "topic": "Vivir (-ir)",
+          "prompt": "Complète : Ellos ___ en España. (vivir)",
+          "type": "text",
+          "solution": "viven",
+          "explanation": "Ellos viven : 3e personne du pluriel.",
+          "weight": 1
+        },
+        {
+          "id": 111,
+          "topic": "Llamarse",
+          "prompt": "Complète : Nosotros nos ___ Laura y Pablo. (llamarse)",
+          "type": "text",
+          "solution": "llamamos",
+          "explanation": "Nosotros nos llamamos : nous nous appelons.",
+          "weight": 2
+        },
+        {
+          "id": 112,
+          "topic": "Llamarse",
+          "prompt": "Quelle phrase est correcte pour « Vous vous appelez » (vosotros) ?",
+          "type": "single",
+          "solution": "Os llamáis",
+          "explanation": "Vosotros os llamáis, avec le pronom os.",
+          "weight": 2,
+          "options": [
+            "Se llaman",
+            "Os llamáis",
+            "Te llamas"
+          ]
+        },
+        {
+          "id": 113,
+          "topic": "Llamarse",
+          "prompt": "Complète : Ella se ___ Lucía. (llamarse)",
+          "type": "text",
+          "solution": "llama",
+          "explanation": "Ella se llama : 3e personne du singulier.",
+          "weight": 2
+        },
+        {
+          "id": 114,
+          "topic": "Mise en application",
+          "prompt": "Quelle forme complète corrige « Yo se llamo » ?",
+          "type": "single",
+          "solution": "Yo me llamo",
+          "explanation": "Le pronom réfléchi qui accompagne yo est me.",
+          "weight": 2,
+          "options": [
+            "Yo me llamo",
+            "Yo te llamo",
+            "Yo se llama"
+          ]
+        },
+        {
+          "id": 115,
+          "topic": "Mise en application",
+          "prompt": "Corrige et explique l'erreur dans « Nosotros coméis » en utilisant la règle des verbes en -er.",
+          "type": "manual",
+          "solution": "Nous devons écrire « Nosotros comemos » : avec nosotros, un verbe régulier en -er prend -emos.",
+          "explanation": "Coméis correspond à vosotros ; avec nosotros, on emploie comemos.",
+          "weight": 2,
+          "example": "Nous devons écrire « Nosotros comemos » : avec nosotros, un verbe régulier en -er prend -emos."
         }
       ]
     }
