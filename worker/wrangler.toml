@@ -1,0 +1,24 @@
+name = "revisio-api"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Origine autorisée à appeler l'API (GitHub Pages). Pas de slash final.
+ALLOWED_ORIGIN = "https://nadir-formadirect.github.io"
+# Fournisseur IA (voir src/ai.js). Un seul est implémenté : "gemini".
+AI_PROVIDER = "gemini"
+# Alias "latest" : évite de figer un modèle retiré. Vérifier avec le bouton « Tester Gemini » de l'espace parent.
+GEMINI_MODEL = "gemini-flash-latest"
+# Plafond d'appels IA par jour (UTC) : garde-fou contre toute boucle ou abus.
+AI_DAILY_LIMIT = "20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "revisio"
+# Remplacer par l'identifiant affiché par : npx wrangler d1 create revisio
+database_id = "REMPLACER-PAR-LE-ID-D1"
+
+# Secrets (jamais dans ce fichier) — à créer avec `npx wrangler secret put NOM` :
+#   GEMINI_API_KEY   clé Gemini
+#   PARENT_PASSWORD  mot de passe de l'espace parent (≥ 12 caractères)
+#   SESSION_SECRET   chaîne aléatoire ≥ 32 caractères (signe les jetons)

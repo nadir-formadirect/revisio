@@ -1,0 +1,186 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#322b80"><meta name="robots" content="noindex,nofollow"><title>Révisio — Espace parent</title><style>
+:root{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#192544;background:#f4f6fc}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}
+.wrap{max-width:860px;margin:0 auto;min-height:100dvh;padding-bottom:40px}
+.top{background:linear-gradient(120deg,#322b80,#6b56df);color:#fff;padding:18px 18px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:0 0 20px 20px}
+.top strong{font-size:19px;letter-spacing:-.5px}.top small{display:block;color:#d9d4ff;font-size:12px}
+.tabs{display:flex;gap:6px;padding:12px 12px 0;overflow-x:auto}.tab{border:0;background:#e9ebf6;color:#3a4766;border-radius:10px;padding:10px 14px;font-weight:750;font-size:14px;white-space:nowrap;min-height:44px}.tab.on{background:#6254d8;color:#fff}
+.body{padding:12px}.card{background:#fff;border:1px solid #e5e8f2;border-radius:16px;padding:16px;margin-bottom:12px}
+h2{font-size:18px;margin:0 0 8px;letter-spacing:-.3px}h3{font-size:15px;margin:14px 0 6px}.muted{color:#66738d;font-size:13px;line-height:1.5}
+.btn{min-height:46px;border-radius:12px;background:#6254d8;border:0;color:#fff;padding:10px 16px;font-weight:760}.btn.sec{background:#eff1f8;color:#30405d}.btn.out{background:#fff;border:1.5px solid #dce1ee;color:#32405f}.btn.danger{background:#fff;border:1.5px solid #e6b8a8;color:#a3401f}.btn.ok{background:#14a58f}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.sm{min-height:38px;padding:6px 12px;font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row.sb{justify-content:space-between}
+.control{border:1.5px solid #dfe4f2;border-radius:12px;background:#fff;min-height:46px;padding:10px 12px;width:100%;color:#1b2947}label.l{display:block;font-size:13px;font-weight:750;margin:12px 0 6px}
+.pill{display:inline-block;padding:3px 9px;border-radius:30px;background:#eeedff;color:#5448b7;font-weight:750;font-size:12px}.pill.warn{background:#fff3d6;color:#7a5a10}.pill.good{background:#e0f6ee;color:#0d6b52}.pill.bad{background:#ffe9e1;color:#8f3a1c}
+.bar{height:7px;border-radius:10px;background:#e7eafa;overflow:hidden;margin:5px 0 12px}.bar span{display:block;height:100%;background:#14ab97}.bar.low span{background:#e0883f}
+.sess{display:flex;justify-content:space-between;gap:10px;align-items:center;width:100%;text-align:left;border:1px solid #e5e9f3;background:#fff;border-radius:12px;padding:12px;margin:7px 0;color:#24314e;min-height:60px}.sess b{font-size:14px}.sess small{display:block;color:#7b869e;font-size:12px;margin-top:3px}
+.q{border:1px solid #e5e9f3;border-radius:12px;padding:12px;margin:8px 0}.q.correct{border-left:4px solid #14ab97}.q.wrong,.q.blank{border-left:4px solid #e0883f}.q.pending,.q.partial{border-left:4px solid #e8bb3a}
+.q p{margin:6px 0;font-size:14px;line-height:1.5}.ans{background:#f6f7fc;border-radius:8px;padding:8px 10px;font-size:14px}
+.code{font-size:30px;font-weight:850;letter-spacing:.14em;text-align:center;background:#f0edff;border-radius:12px;padding:14px;margin:10px 0;user-select:all}
+.warn-box{background:#fff8e3;border:1px solid #f2dfad;border-radius:11px;padding:10px 12px;font-size:13px;line-height:1.5;color:#735a1b;margin:8px 0}
+.err{color:#a3401f;font-size:14px;min-height:20px}.hidden{display:none!important}details summary{cursor:pointer;font-weight:700;font-size:14px;line-height:1.4}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.thumbs img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #dfe4f2}
+</style></head><body><main class="wrap" id="app"></main><script src="config.js"></script><script>
+const API=((window.REVISIO_CONFIG||{}).API_BASE||'').replace(/\/$/,'');
+const KEY='revisio-parent-token';
+const app=document.getElementById('app');
+let state={tab:'kids',overview:null,sessions:null,sessionDetail:null,chapters:null,generating:false,images:[]};
+const ls={get(){try{return localStorage.getItem(KEY)||''}catch{return ''}},set(v){try{localStorage.setItem(KEY,v)}catch{}},del(){try{localStorage.removeItem(KEY)}catch{}}};
+
+// ---- DOM helpers (aucun innerHTML avec des données : tout passe par textContent) ----
+function h(tag,attrs,...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e[k]=v;else if(v===true)e.setAttribute(k,'');else if(v!==false&&v!=null)e.setAttribute(k,v)}for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
+const fmtDate=ms=>new Date(ms).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});
+const num=n=>String(Math.round(n*100)/100).replace('.',',');
+const MODE={training:'Entraînement',evaluation:'Évaluation',remediation:'Révision ciblée'};
+
+async function api(path,opts={}){
+  const r=await fetch(API+path,{...opts,headers:{'content-type':'application/json',...(ls.get()?{authorization:'Bearer '+ls.get()}:{})}});
+  let j=null;try{j=await r.json()}catch{}
+  if(!r.ok){const e=new Error((j&&j.error)||'Erreur '+r.status);e.status=r.status;if(r.status===401&&ls.get()){ls.del();login('Session expirée : reconnecte-toi.')}throw e}
+  return j;
+}
+const toast=(msg)=>{const t=h('div',{class:'card',style:'position:fixed;left:12px;right:12px;bottom:12px;max-width:600px;margin:auto;z-index:9;box-shadow:0 8px 30px #0003'},msg);document.body.append(t);setTimeout(()=>t.remove(),3500)};
+
+// ---- connexion ----
+function login(msg){
+  if(!API){app.replaceChildren(h('div',{class:'body'},h('div',{class:'card'},h('h2',{},'Serveur non configuré'),h('p',{class:'muted'},'Renseigne API_BASE dans config.js (voir DEPLOIEMENT.md).'))));return}
+  const pw=h('input',{class:'control',type:'password',autocomplete:'current-password',placeholder:'Mot de passe parent'});
+  const err=h('p',{class:'err','aria-live':'polite'},msg||'');
+  const go=async()=>{err.textContent='';try{const r=await api('/api/parent/login',{method:'POST',body:JSON.stringify({password:pw.value})});ls.set(r.token);start()}catch(e){err.textContent=e.status?e.message:'Connexion impossible.'}};
+  pw.onkeydown=e=>{if(e.key==='Enter')go()};
+  app.replaceChildren(h('header',{class:'top'},h('div',{},h('strong',{},'✦ révisio'),h('small',{},'Espace parent'))),h('div',{class:'body'},h('div',{class:'card'},h('h2',{},'Connexion'),pw,err,h('div',{class:'row'},h('button',{class:'btn',onclick:go},'Entrer')),h('p',{class:'muted'},'Accès réservé aux parents. Les données des enfants ne sont lisibles qu’après connexion.'))));
+  pw.focus();
+}
+
+function shell(content){
+  const tabs=[['kids','Enfants'],['ai','Créer un cours'],['lib','Bibliothèque'],['set','Réglages']];
+  app.replaceChildren(
+    h('header',{class:'top'},h('div',{},h('strong',{},'✦ révisio'),h('small',{},'Espace parent')),h('a',{href:'index.html',style:'color:#fff;font-size:13px'},'← Application')),
+    h('nav',{class:'tabs'},tabs.map(([k,l])=>h('button',{class:'tab'+(state.tab===k?' on':''),onclick:()=>{state.tab=k;state.sessionDetail=null;render()}},l))),
+    h('div',{class:'body'},content));
+}
+async function start(){state.tab='kids';render()}
+async function render(){
+  try{
+    if(state.tab==='kids'){if(state.sessionDetail)return shell(sessionView(state.sessionDetail));state.overview=await api('/api/parent/overview');return shell(kidsView())}
+    if(state.tab==='ai')return shell(aiView());
+    if(state.tab==='lib'){state.chapters=(await api('/api/parent/chapters')).chapters;return shell(libView())}
+    if(state.tab==='set')return shell(settingsView());
+  }catch(e){if(e.status!==401)shell(h('div',{class:'card'},h('h2',{},'Erreur'),h('p',{class:'err'},e.message||'Connexion impossible.'),h('button',{class:'btn sec',onclick:render},'Réessayer')))}
+}
+
+// ---- enfants ----
+function rateBar(t){const pct=Math.round(t.rate*100);return h('div',{},h('div',{class:'row sb',style:'font-size:14px'},h('span',{},h('strong',{},t.topic),' ',h('span',{class:'muted'},t.subject)),h('span',{},num(t.earned),'/',num(t.max),' · ',pct,' %')),h('div',{class:'bar'+(pct<60?' low':'')},h('span',{style:'width:'+pct+'%'})))}
+function sessRow(s){
+  const score=s.mode==='remediation'?null:num(s.score)+(s.pending?'–'+num(s.score+s.pending):'')+' / '+num(s.max);
+  return h('button',{class:'sess',onclick:async()=>{state.sessionDetail=await api('/api/parent/sessions/'+s.id);render()}},
+    h('span',{},h('b',{},s.courseName),h('small',{},MODE[s.mode]||s.mode,' · ',fmtDate(s.createdAt))),
+    h('span',{style:'text-align:right'},score?h('b',{},score):h('span',{class:'pill'},'ciblée'),s.pending>0?h('small',{class:'pill warn',style:'display:block;margin-top:4px'},'à valider'):null));
+}
+function kidsView(){
+  const o=state.overview;const out=[];
+  if(!o.profiles.length)out.push(h('div',{class:'card'},h('h2',{},'Commence par ajouter un enfant'),h('p',{class:'muted'},'Un code personnel lui sera donné : il l’entre une seule fois sur son appareil et ses résultats arrivent ici automatiquement.')));
+  for(const p of o.profiles){
+    out.push(h('div',{class:'card'},
+      h('div',{class:'row sb'},h('h2',{style:'margin:0'},p.name),p.pendingToGrade?h('span',{class:'pill warn'},p.pendingToGrade,' à valider'):h('span',{class:'pill'},p.sessionCount,' séance',p.sessionCount>1?'s':'')),
+      p.topics.length?h('div',{},h('h3',{},'Notions (de la plus fragile à la plus solide)'),p.topics.slice(0,6).map(rateBar)):h('p',{class:'muted'},'Aucune séance pour l’instant.'),
+      p.recent.length?h('div',{},h('h3',{},'Dernières séances'),p.recent.map(sessRow)):null,
+      h('details',{style:'margin-top:12px'},h('summary',{},'Gérer ce profil'),h('div',{class:'row',style:'margin-top:10px'},
+        h('button',{class:'btn sec sm',onclick:async()=>{if(!confirm('Générer un nouveau code ? L’ancien ne fonctionnera plus et l’enfant devra le ressaisir.'))return;const r=await api('/api/parent/profiles/'+p.id+'/reset-code',{method:'POST'});showCode(p.name,r.code)}},'Nouveau code'),
+        h('button',{class:'btn danger sm',onclick:async()=>{if(!confirm('Supprimer '+p.name+' et TOUT son historique ? Action définitive.'))return;await api('/api/parent/profiles/'+p.id,{method:'DELETE'});render()}},'Supprimer et effacer les données')))));
+  }
+  const name=h('input',{class:'control',placeholder:'Prénom',maxlength:'40'});
+  out.push(h('div',{class:'card'},h('h2',{},'Ajouter un enfant'),name,h('div',{class:'row',style:'margin-top:10px'},h('button',{class:'btn',onclick:async()=>{if(!name.value.trim())return;const r=await api('/api/parent/profiles',{method:'POST',body:JSON.stringify({name:name.value})});showCode(r.name,r.code)}},'Créer le profil'))));
+  return out;
+}
+function showCode(name,code){
+  state.sessionDetail=null;
+  shell(h('div',{class:'card'},h('h2',{},'Code de '+name),h('div',{class:'code'},code),h('p',{class:'muted'},'Montre-le à ',name,' : il l’entre une fois sur son appareil (iPhone ou PC). Ce code ne sera plus affiché ensuite : note-le si besoin, sinon génère-en un nouveau.'),h('button',{class:'btn',onclick:render},'OK, c’est noté')));
+}
+
+// ---- détail d'une séance ----
+function sessionView(s){
+  const total=s.mode==='remediation'?null:num(s.score)+(s.pending?'–'+num(s.score+s.pending):'')+' / '+num(s.max);
+  const regrade=async(qid,grade)=>{state.sessionDetail=await api('/api/parent/sessions/'+s.id+'/grade',{method:'POST',body:JSON.stringify({qid,grade})});render()};
+  return [h('div',{class:'card'},h('button',{class:'btn out sm',onclick:()=>{state.sessionDetail=null;render()}},'← Retour'),
+    h('h2',{style:'margin-top:12px'},s.courseName),h('p',{class:'muted'},s.subject,' · ',MODE[s.mode]||s.mode,' · ',fmtDate(s.createdAt)),
+    total?h('div',{style:'font-size:34px;font-weight:850;color:#6554d7'},total):h('p',{class:'muted'},'Révision ciblée : pas de note sur 20.'),
+    s.pending>0?h('div',{class:'warn-box'},'Des réponses libres attendent ta validation ci-dessous.'):null),
+  ...s.items.map(it=>h('div',{class:'q '+it.kind},
+    h('div',{class:'row sb'},h('span',{class:'pill'},it.topic),h('span',{class:'pill '+(it.kind==='correct'?'good':it.kind==='pending'||it.kind==='partial'?'warn':'bad')},it.kind==='pending'?'à valider':num(it.points)+'/'+num(it.weight)+' pt')),
+    h('p',{},h('strong',{},it.prompt)),
+    h('p',{},'Réponse de l’enfant :'),h('div',{class:'ans'},it.answer||'—'),
+    it.kind!=='correct'?h('p',{},h('strong',{},'Attendu : '),it.expected):null,
+    h('p',{class:'muted'},it.explanation),
+    it.type==='manual'&&it.answer&&it.answer!=='Non répondu'?h('div',{class:'row'},h('button',{class:'btn ok sm',onclick:()=>regrade(it.qid,1)},'✓ Accepter'),h('button',{class:'btn out sm',onclick:()=>regrade(it.qid,0)},'✕ Refuser'),it.gradedByParent?h('span',{class:'muted'},'validé par toi'):null):null))];
+}
+
+// ---- création de cours par IA ----
+async function shrink(file){
+  const bmp=await createImageBitmap(file);const max=1600;const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  const url=c.toDataURL('image/jpeg',0.8);return {mime:'image/jpeg',data:url.split(',')[1],preview:url};
+}
+function aiView(){
+  const subject=h('input',{class:'control',list:'subjects',placeholder:'Ex. : SVT, Mathématiques…'});
+  const dl=h('datalist',{id:'subjects'},['Mathématiques','Espagnol','Anglais LV1','Technologie','SVT','Français','Histoire-Géographie','Physique-Chimie'].map(v=>h('option',{value:v})));
+  const level=h('input',{class:'control',value:'5e'});const title=h('input',{class:'control',placeholder:'Ex. : Les cellules'});
+  const text=h('textarea',{class:'control',rows:'8',placeholder:'Colle ici le texte du cours (ou ajoute des photos de cahier ci-dessous)…'});
+  const thumbs=h('div',{class:'thumbs'});const err=h('p',{class:'err','aria-live':'polite'});
+  const pick=h('input',{type:'file',accept:'image/*',multiple:true,class:'hidden',onchange:async e=>{err.textContent='';try{for(const f of [...e.target.files]){if(state.images.length>=4)break;const im=await shrink(f);state.images.push(im);thumbs.append(h('img',{src:im.preview,alt:'Photo du cours'}))}}catch{err.textContent='Photo illisible.'}e.target.value=''}});
+  const result=h('div',{});
+  const btn=h('button',{class:'btn',onclick:async()=>{
+    err.textContent='';btn.disabled=true;btn.textContent='Génération en cours… (jusqu’à 1 minute)';result.replaceChildren();
+    try{const r=await api('/api/parent/ai/generate',{method:'POST',body:JSON.stringify({subject:subject.value,level:level.value,title:title.value,courseText:text.value,images:state.images.map(i=>({mime:i.mime,data:i.data}))})});state.images=[];thumbs.replaceChildren();result.replaceChildren(draftView({id:r.id,status:'draft',warnings:r.warnings,chapter:r.chapter}))}
+    catch(e){err.textContent=e.message}finally{btn.disabled=false;btn.textContent='Générer le brouillon'}}},'Générer le brouillon');
+  return [h('div',{class:'card'},h('h2',{},'Créer un cours à partir du cahier'),
+    h('p',{class:'muted'},'L’IA propose un chapitre complet (20 exercices d’entraînement + 15 de contrôle, chaque banque sur 20 points). Rien n’est visible par les enfants tant que tu n’as pas relu et publié. La note finale reste calculée par règles, pas par l’IA.'),
+    h('div',{class:'warn-box'},'Les photos et le texte sont envoyés à Google (Gemini). Ne photographie que le cours : pas de nom, de visage ni d’information personnelle.'),
+    h('label',{class:'l'},'Matière'),subject,dl,h('label',{class:'l'},'Niveau'),level,h('label',{class:'l'},'Titre du chapitre'),title,
+    h('label',{class:'l'},'Texte du cours'),text,
+    h('div',{class:'row',style:'margin-top:10px'},h('button',{class:'btn sec sm',onclick:()=>pick.click()},'📷 Ajouter des photos (4 max)'),pick),thumbs,err,
+    h('div',{class:'row',style:'margin-top:12px'},btn)),result];
+}
+
+function bankView(chapter,key,label,markDirty){
+  const qs=chapter[key]||[];const sum=qs.reduce((a,q)=>a+q.weight,0);
+  return h('div',{},h('h3',{},label,' · ',qs.length,' questions · ',num(sum),' pts'),qs.map((q,i)=>h('details',{class:'q'},
+    h('summary',{},h('span',{class:'pill'},q.topic),' ',q.prompt),
+    q.options?h('ul',{},q.options.map(o=>h('li',{},o,(Array.isArray(q.solution)?q.solution.includes(o):q.solution===o)?' ✓':''))):null,
+    q.type==='text'?h('p',{},'Réponse attendue : ',h('strong',{},String(q.solution)),q.accepted?h('span',{class:'muted'},' (acceptées : ',q.accepted.join(', '),')'):null):null,
+    q.type==='manual'?h('p',{},'Exemple : ',q.example||''):null,
+    h('p',{class:'muted'},q.explanation),h('p',{class:'muted'},'Type : ',q.type,' · ',num(q.weight),' pt'),
+    qs.length>5?h('button',{class:'btn danger sm',onclick:()=>{chapter[key].splice(i,1);markDirty()}},'Retirer cette question'):null)));
+}
+function draftView(item){
+  let dirty=false;const box=h('div',{class:'card'});
+  const redraw=()=>{box.replaceChildren(...build())};
+  const markDirty=()=>{dirty=true;redraw()};
+  const build=()=>{const c=item.chapter;return [
+    h('div',{class:'row sb'},h('h2',{style:'margin:0'},c.name),h('span',{class:'pill '+(item.status==='published'?'good':'warn')},item.status==='published'?'publié':'brouillon')),
+    h('p',{class:'muted'},c.subject,' · ',c.level),
+    item.warnings&&item.warnings.length?h('div',{class:'warn-box'},h('strong',{},'À vérifier :'),h('ul',{},item.warnings.map(w=>h('li',{},w)))):null,
+    h('div',{class:'warn-box'},'Relis les réponses attendues : l’IA peut se tromper. Ouvre chaque question et retire celles qui sont douteuses (le barème est rééquilibré à 20 points automatiquement).'),
+    bankView(c,'questions','Entraînement',markDirty),bankView(c,'evaluationQuestions','Contrôle',markDirty),
+    h('div',{class:'row',style:'margin-top:14px'},
+      dirty?h('button',{class:'btn sec',onclick:async()=>{const r=await api('/api/parent/chapters/'+item.id,{method:'PUT',body:JSON.stringify({chapter:c})});item.chapter=r.chapter;dirty=false;redraw();toast('Modifications enregistrées.')}},'Enregistrer les retraits'):null,
+      item.status==='published'?h('button',{class:'btn out',onclick:async()=>{await api('/api/parent/chapters/'+item.id+'/unpublish',{method:'POST'});item.status='draft';redraw()}},'Dépublier'):
+      h('button',{class:'btn ok',onclick:async()=>{try{if(dirty){const r=await api('/api/parent/chapters/'+item.id,{method:'PUT',body:JSON.stringify({chapter:c})});item.chapter=r.chapter;dirty=false}await api('/api/parent/chapters/'+item.id+'/publish',{method:'POST'});item.status='published';redraw();toast('Publié : visible par les enfants.')}catch(e){toast(e.message)}}},'Publier pour les enfants'),
+      h('button',{class:'btn danger',onclick:async()=>{if(!confirm('Supprimer ce chapitre ?'))return;await api('/api/parent/chapters/'+item.id,{method:'DELETE'});box.remove()}},'Supprimer'))]};
+  redraw();return box;
+}
+function libView(){
+  if(!state.chapters.length)return h('div',{class:'card'},h('h2',{},'Aucun cours créé ici'),h('p',{class:'muted'},'Les 5 chapitres d’origine restent disponibles dans l’application. Ceux que tu crées avec l’IA apparaissent ici.'));
+  return state.chapters.map(draftView);
+}
+
+// ---- réglages ----
+function settingsView(){
+  const out=h('div',{});
+  return [h('div',{class:'card'},h('h2',{},'Connexion IA (Gemini)'),
+    h('p',{class:'muted'},'Teste que la clé enregistrée sur le serveur fonctionne et affiche les modèles disponibles. La clé n’est jamais visible ici.'),
+    h('button',{class:'btn sec',onclick:async e=>{e.target.disabled=true;out.replaceChildren(h('p',{class:'muted'},'Test en cours…'));try{const r=await api('/api/parent/ai/models');out.replaceChildren(h('p',{},'✓ Gemini répond. Modèle utilisé : ',h('strong',{},r.current)),h('p',{class:'muted'},'Disponibles : ',r.models.slice(0,12).join(', '),r.models.length>12?'…':''),r.models.includes(r.current)?null:h('div',{class:'warn-box'},'Le modèle configuré n’est pas dans cette liste : change GEMINI_MODEL dans wrangler.toml.'))}catch(err){out.replaceChildren(h('p',{class:'err'},err.message))}finally{e.target.disabled=false}}},'Tester Gemini'),out),
+  h('div',{class:'card'},h('h2',{},'Confidentialité'),h('p',{class:'muted'},'Les résultats des enfants sont stockés sur ton compte Cloudflare (base D1), jamais dans le dépôt GitHub public. Seuls le prénom, les réponses et les scores sont conservés. Supprimer un profil efface tout son historique. Les textes et photos envoyés à l’IA sont transmis à Google ; aucun résultat d’enfant n’est jamais envoyé à l’IA.')),
+  h('div',{class:'card'},h('button',{class:'btn out',onclick:()=>{ls.del();login()}},'Se déconnecter'))];
+}
+
+if(ls.get())start();else login();
+</script></body></html>

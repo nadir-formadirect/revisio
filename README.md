@@ -44,7 +44,10 @@ Types pris en charge : `single`, `multi`, `text`, `manual`, `pair`, `factor`. Le
 4. ChatGPT modifie uniquement `chapitres.json` dans GitHub (pas `index.html`).
 5. GitHub Pages publie la bibliothèque mise à jour à l'adresse inchangée.
 
-## Limites de la V3.1
+## Version autonome (V4)
+Serveur optionnel (`worker/`), espace parent (`parent.html`), génération IA de brouillons : voir `DEPLOIEMENT.md`. Sans `API_BASE` dans `config.js`, l'application fonctionne comme en V3.1.
+
+## Limites de la V3.1 (mode local)
 Pas d'IA intégrée au site, pas d'analyse de photo automatique, pas d'authentification, pas de synchronisation des résultats entre appareils. GitHub Pages et ce dépôt sont publics ; aucun nom, photo de cahier nominative, note individuelle ou information sensible ne doit être publié dans `chapitres.json`.
 
 

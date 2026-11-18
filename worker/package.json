@@ -1,0 +1,15 @@
+{
+  "name": "revisio-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --persist-to .wrangler-state",
+    "deploy": "wrangler deploy",
+    "db:init:local": "wrangler d1 execute revisio --local --persist-to .wrangler-state --file=schema.sql",
+    "db:init": "wrangler d1 execute revisio --remote --file=schema.sql",
+    "test": "node test/run.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
