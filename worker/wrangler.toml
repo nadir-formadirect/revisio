@@ -8,7 +8,7 @@ ALLOWED_ORIGIN = "https://nadir-formadirect.github.io"
 # Fournisseur IA (voir src/ai.js). Un seul est implémenté : "gemini".
 AI_PROVIDER = "gemini"
 # Alias "latest" : évite de figer un modèle retiré. Vérifier avec le bouton « Tester Gemini » de l'espace parent.
-GEMINI_MODEL = "gemini-flash-latest"
+GEMINI_MODEL = "gemini-2.5-flash"
 # Plafond d'appels IA par jour (UTC) : garde-fou contre toute boucle ou abus.
 AI_DAILY_LIMIT = "20"
 
