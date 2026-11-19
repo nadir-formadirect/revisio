@@ -72,7 +72,9 @@ async function geminiFetch(env, path, init) {
       if (r.status === 429) throw new AiError('Quota Gemini atteint (palier gratuit). Réessaie plus tard.', 429);
       if (r.status === 400 || r.status === 404) throw new AiError(`Gemini a refusé la requête (${r.status}). Vérifie le modèle avec « Tester Gemini ».`, 502);
       if (r.status === 401 || r.status === 403) throw new AiError('Clé Gemini refusée ou non autorisée.', 502);
-      throw new AiError(`Erreur Gemini (${r.status}).`, 502);
+      const err = new AiError(r.status === 503 || r.status === 500 ? 'Gemini est surchargé en ce moment. Réessaie dans quelques minutes.' : `Erreur Gemini (${r.status}).`, 502);
+      err.retry = r.status === 503 || r.status === 500;
+      throw err;
     }
     return json;
   } catch (e) {
@@ -108,12 +110,18 @@ const PROVIDERS = {
       });
       const path = `/v1beta/models/${model}:generateContent`;
       let json;
-      try {
-        json = await geminiFetch(env, path, { method: 'POST', body: body(true) });
-      } catch (e) {
-        // Certains modèles refusent thinkingBudget=0 : on réessaie sans.
-        if (e instanceof AiError && e.status === 502 && /refusé la requête/.test(e.message)) json = await geminiFetch(env, path, { method: 'POST', body: body(false) });
-        else throw e;
+      let withThinking = true;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          json = await geminiFetch(env, path, { method: 'POST', body: body(withThinking) });
+          break;
+        } catch (e) {
+          // Certains modèles refusent thinkingBudget=0 : on réessaie sans.
+          if (withThinking && e instanceof AiError && e.status === 502 && /refusé la requête/.test(e.message)) { withThinking = false; continue; }
+          // Gemini surchargé (503/500) : jusqu'à 4 essais espacés.
+          if (e && e.retry && attempt < 3) { await new Promise((r) => setTimeout(r, 4000 * (attempt + 1))); continue; }
+          throw e;
+        }
       }
       const cand = json?.candidates?.[0];
       if (!cand) throw new AiError(json?.promptFeedback?.blockReason ? 'Contenu refusé par les filtres de sécurité de Gemini.' : 'Réponse Gemini vide.');
