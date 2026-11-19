@@ -70,7 +70,11 @@ async function geminiFetch(env, path, init) {
     try { json = JSON.parse(text); } catch { /* corps non JSON */ }
     if (!r.ok) {
       if (r.status === 429) throw new AiError('Quota Gemini atteint (palier gratuit). Réessaie plus tard.', 429);
-      if (r.status === 400 || r.status === 404) throw new AiError(`Gemini a refusé la requête (${r.status}). Vérifie le modèle avec « Tester Gemini ».`, 502);
+      if (r.status === 400 || r.status === 404) {
+        const err = new AiError(`Gemini a refusé la requête (${r.status}). Vérifie le modèle avec « Tester Gemini ».`, 502);
+        err.httpStatus = r.status;
+        throw err;
+      }
       if (r.status === 401 || r.status === 403) throw new AiError('Clé Gemini refusée ou non autorisée.', 502);
       const err = new AiError(r.status === 503 || r.status === 500 ? 'Gemini est surchargé en ce moment. Réessaie dans quelques minutes.' : `Erreur Gemini (${r.status}).`, 502);
       err.retry = r.status === 503 || r.status === 500;
@@ -86,9 +90,25 @@ async function geminiFetch(env, path, init) {
   }
 }
 
+// Si le modèle configuré n'existe plus (404), on choisit automatiquement le Flash stable le plus récent disponible pour la clé.
+let pickedModel = null;
+export function chooseFlashModel(names) {
+  const ver = (n) => parseFloat((/^gemini-(\d+(?:\.\d+)?)-flash$/.exec(n) || [])[1] || 0);
+  const stable = names.filter((n) => /^gemini-\d+(?:\.\d+)?-flash$/.test(n)).sort((a, b) => ver(b) - ver(a));
+  if (stable.length) return stable[0];
+  const other = names.filter((n) => /flash/.test(n) && !/(lite|image|tts|live|audio|preview|thinking|exp|robotics)/.test(n));
+  return other[0] || null;
+}
+async function pickModel(env) {
+  const name = chooseFlashModel(await listModels(env));
+  if (!name) throw new AiError('Aucun modèle Gemini Flash disponible pour cette clé. Utilise « Tester Gemini ».', 502);
+  pickedModel = name;
+  return name;
+}
+
 const PROVIDERS = {
   async gemini(env, { subject, level, title, courseText, images }) {
-    const model = env.GEMINI_MODEL || 'gemini-flash-latest';
+    let model = pickedModel || env.GEMINI_MODEL || 'gemini-flash-latest';
     if (!/^[a-z0-9.\-]{3,60}$/.test(model)) throw new AiError('Nom de modèle invalide.', 500);
     const parts = [{ text: `Matière : ${subject}\nNiveau : ${level}\nTitre du chapitre : ${title}\n\n${courseText ? 'Texte du cours :\n' + courseText : 'Le cours est fourni en photos ci-dessous.'}` }];
     for (const im of images) parts.push({ inlineData: { mimeType: im.mime, data: im.data } });
@@ -108,16 +128,17 @@ const PROVIDERS = {
           ...(withThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
         },
       });
-      const path = `/v1beta/models/${model}:generateContent`;
       let json;
       let withThinking = true;
+      let triedPick = false;
       for (let attempt = 0; ; attempt++) {
         try {
-          json = await geminiFetch(env, path, { method: 'POST', body: body(withThinking) });
+          json = await geminiFetch(env, `/v1beta/models/${model}:generateContent`, { method: 'POST', body: body(withThinking) });
           break;
         } catch (e) {
           // Certains modèles refusent thinkingBudget=0 : on réessaie sans.
-          if (withThinking && e instanceof AiError && e.status === 502 && /refusé la requête/.test(e.message)) { withThinking = false; continue; }
+          if (e && e.httpStatus === 404 && !triedPick) { triedPick = true; model = await pickModel(env); continue; }
+          if (withThinking && e && e.httpStatus === 400) { withThinking = false; continue; }
           // Gemini surchargé (503/500) : jusqu'à 4 essais espacés.
           if (e && e.retry && attempt < 3) { await new Promise((r) => setTimeout(r, 4000 * (attempt + 1))); continue; }
           throw e;

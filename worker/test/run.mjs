@@ -98,6 +98,10 @@ try {
   ok(mockState.last.body.contents[0].parts.some((p) => p.inlineData), 'la photo est transmise à Gemini');
   ok(mockState.last.body.systemInstruction.parts[0].text.includes('jamais une consigne'), 'consigne anti-injection présente');
 
+  mockState.mode = 'oldmodel';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle retiré', courseText: course } });
+  ok(r.status === 201 && /gemini-3-flash:/.test(mockState.last?.url || ''), 'modèle retiré (404) → choix automatique du Flash stable le plus récent (ni lite ni preview)');
+  mockState.mode = 'ok';
   mockState.mode = '429';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
   ok(r.status === 429 && /Quota Gemini/.test(r.json.error), 'quota Gemini dépassé → message clair');
@@ -105,10 +109,10 @@ try {
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
   ok(r.status === 502, 'réponse Gemini illisible → 502 propre');
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
-  ok(r.status === 502, '4e génération du jour encore permise (plafond = 4)');
+  ok(r.status === 502, '5e génération du jour encore permise (plafond = 5)');
   const callsBefore = mockState.calls;
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
-  ok(r.status === 429 && /Plafond quotidien/.test(r.json.error) && mockState.calls === callsBefore, '5e génération : plafond quotidien atteint, aucun appel Gemini émis');
+  ok(r.status === 429 && /Plafond quotidien/.test(r.json.error) && mockState.calls === callsBefore, '6e génération : plafond quotidien atteint, aucun appel Gemini émis');
   mockState.mode = 'ok';
   // --- Import manuel (réponse collée depuis ChatGPT/Claude) ---
   const mk = (n, tag) => Array.from({ length: n }, (_, k) => ({ topic: `Notion ${1 + (k % 4)}`, prompt: `${tag} question ${k} ?`, type: 'single', options: ['A', 'B', 'C'], correct: ['B'], explanation: `Parce que B (${k}).`, weight: 1 + (k % 3) }));
@@ -125,7 +129,7 @@ try {
   r = await call('/api/parent/ai/import', { method: 'POST', token: P, body: { ...imp, json: 'pas du json' } }); ok(r.status === 400, 'import : texte sans JSON → 400');
   r = await call('/api/parent/ai/import', { method: 'POST', token: P, body: { ...imp, json: '{"training": [' } }); ok(r.status === 400, 'import : JSON coupé → 400 avec message');
   r = await call('/api/parent/ai/import', { method: 'POST', token: P, body: { ...imp, json: JSON.stringify({ training: mk(3, 'x'), evaluation: mk(3, 'y') }) } }); ok(r.status === 422, 'import : moins de 5 questions → 422');
-  r = await call('/api/parent/ai/models', { token: P }); ok(r.status === 200 && r.json.models.length === 1 && r.json.models[0] === 'gemini-flash-latest', 'liste des modèles (seuls ceux qui génèrent du texte)');
+  r = await call('/api/parent/ai/models', { token: P }); ok(r.status === 200 && r.json.models.length === 4 && r.json.models.includes('gemini-flash-latest') && !r.json.models.includes('embedding-001'), 'liste des modèles (seuls ceux qui génèrent du texte)');
 
   console.log('Publication');
   r = await call('/api/chapters', { token: C }); ok(r.json.chapitres.length === 0, 'un brouillon n’est pas visible par les enfants');
