@@ -16,7 +16,7 @@ AI_DAILY_LIMIT = "20"
 binding = "DB"
 database_name = "revisio"
 # Remplacer par l'identifiant affiché par : npx wrangler d1 create revisio
-database_id = "REMPLACER-PAR-LE-ID-D1"
+database_id = "2e653208-972f-40bf-b5a8-2c9039d263bb"
 
 # Secrets (jamais dans ce fichier) — à créer avec `npx wrangler secret put NOM` :
 #   GEMINI_API_KEY   clé Gemini
