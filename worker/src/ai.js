@@ -20,7 +20,7 @@ Règles impératives :
 - Aucune question ne doit nécessiter de voir une image. Écris en français (sauf pour les langues vivantes étudiées).
 - Vérifie chaque réponse attendue avant de la fournir.`;
 
-function schema() {
+function schema(banks = ['training', 'evaluation']) {
   const question = {
     type: 'OBJECT',
     properties: {
@@ -40,10 +40,9 @@ function schema() {
     type: 'OBJECT',
     properties: {
       warnings: { type: 'ARRAY', items: { type: 'STRING' } },
-      training: { type: 'ARRAY', items: question },
-      evaluation: { type: 'ARRAY', items: question },
+      ...Object.fromEntries(banks.map((b) => [b, { type: 'ARRAY', items: question }])),
     },
-    required: ['warnings', 'training', 'evaluation'],
+    required: ['warnings', ...banks],
   };
 }
 
@@ -59,7 +58,7 @@ const GEMINI_ORIGIN = (env) => (env.GEMINI_BASE_URL || 'https://generativelangua
 async function geminiFetch(env, path, init) {
   if (!env.GEMINI_API_KEY) throw new AiError("La clé Gemini n'est pas configurée sur le serveur.", 503);
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 90_000);
+  const timer = setTimeout(() => ctrl.abort(), 150_000);
   try {
     const r = await fetch(GEMINI_ORIGIN(env) + path, {
       ...init,
@@ -91,18 +90,39 @@ const PROVIDERS = {
     if (!/^[a-z0-9.\-]{3,60}$/.test(model)) throw new AiError('Nom de modèle invalide.', 500);
     const parts = [{ text: `Matière : ${subject}\nNiveau : ${level}\nTitre du chapitre : ${title}\n\n${courseText ? 'Texte du cours :\n' + courseText : 'Le cours est fourni en photos ci-dessous.'}` }];
     for (const im of images) parts.push({ inlineData: { mimeType: im.mime, data: im.data } });
-    const json = await geminiFetch(env, `/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
+    // Deux demandes en parallèle (une par banque) : deux fois moins de texte à produire par appel, donc bien plus rapide.
+    const ANGLE = {
+      training: "Produis UNIQUEMENT la banque \"training\" (20 questions d'entraînement : définitions, application directe, pièges courants). Laisse \"evaluation\" absente.",
+      evaluation: "Produis UNIQUEMENT la banque \"evaluation\" (15 questions de contrôle : situations nouvelles, raisonnement, mise en application). Laisse \"training\" absente.",
+    };
+    const one = async (bank) => {
+      const body = (withThinking) => JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM + '\n\n' + ANGLE[bank] }] },
         contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: schema(), temperature: 0.4 },
-      }),
-    });
-    const cand = json?.candidates?.[0];
-    if (!cand) throw new AiError(json?.promptFeedback?.blockReason ? 'Contenu refusé par les filtres de sécurité de Gemini.' : 'Réponse Gemini vide.');
-    const text = (cand.content?.parts || []).map((p) => p.text || '').join('');
-    try { return JSON.parse(text); } catch { throw new AiError("Gemini a renvoyé un format illisible. Relance la génération."); }
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: schema([bank]),
+          temperature: 0.4,
+          ...(withThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
+      });
+      const path = `/v1beta/models/${model}:generateContent`;
+      let json;
+      try {
+        json = await geminiFetch(env, path, { method: 'POST', body: body(true) });
+      } catch (e) {
+        // Certains modèles refusent thinkingBudget=0 : on réessaie sans.
+        if (e instanceof AiError && e.status === 502 && /refusé la requête/.test(e.message)) json = await geminiFetch(env, path, { method: 'POST', body: body(false) });
+        else throw e;
+      }
+      const cand = json?.candidates?.[0];
+      if (!cand) throw new AiError(json?.promptFeedback?.blockReason ? 'Contenu refusé par les filtres de sécurité de Gemini.' : 'Réponse Gemini vide.');
+      const text = (cand.content?.parts || []).map((p) => p.text || '').join('');
+      try { return JSON.parse(text); } catch { throw new AiError("Gemini a renvoyé un format illisible. Relance la génération."); }
+    };
+    const [a, b] = await Promise.all([one('training'), one('evaluation')]);
+    const warnings = [...new Set([...(a.warnings || []), ...(b.warnings || [])])];
+    return { warnings, training: a.training || [], evaluation: b.evaluation || [] };
   },
 };
 
