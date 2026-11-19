@@ -102,6 +102,10 @@ try {
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle retiré', courseText: course } });
   ok(r.status === 201 && /gemini-3-flash:/.test(mockState.last?.url || ''), 'modèle retiré (404) → choix automatique du Flash stable le plus récent (ni lite ni preview)');
   mockState.mode = 'ok';
+  mockState.mode = 'busy';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle saturé', courseText: course } });
+  ok(r.status === 201 && /gemini-flash-latest:/.test(mockState.last?.url || ''), 'modèle surchargé (503) → bascule automatique sur un autre modèle');
+  mockState.mode = 'ok';
   mockState.mode = '429';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
   ok(r.status === 429 && /Quota Gemini/.test(r.json.error), 'quota Gemini dépassé → message clair');
@@ -109,10 +113,10 @@ try {
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
   ok(r.status === 502, 'réponse Gemini illisible → 502 propre');
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
-  ok(r.status === 502, '5e génération du jour encore permise (plafond = 5)');
+  ok(r.status === 502, '6e génération du jour encore permise (plafond = 6)');
   const callsBefore = mockState.calls;
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
-  ok(r.status === 429 && /Plafond quotidien/.test(r.json.error) && mockState.calls === callsBefore, '6e génération : plafond quotidien atteint, aucun appel Gemini émis');
+  ok(r.status === 429 && /Plafond quotidien/.test(r.json.error) && mockState.calls === callsBefore, '7e génération : plafond quotidien atteint, aucun appel Gemini émis');
   mockState.mode = 'ok';
   // --- Import manuel (réponse collée depuis ChatGPT/Claude) ---
   const mk = (n, tag) => Array.from({ length: n }, (_, k) => ({ topic: `Notion ${1 + (k % 4)}`, prompt: `${tag} question ${k} ?`, type: 'single', options: ['A', 'B', 'C'], correct: ['B'], explanation: `Parce que B (${k}).`, weight: 1 + (k % 3) }));
@@ -121,7 +125,6 @@ try {
   r = await call('/api/parent/ai/import', { method: 'POST', token: C, body: imp }); ok(r.status === 403, 'import interdit à l’enfant');
   const callsImp = mockState.calls;
   r = await call('/api/parent/ai/import', { method: 'POST', token: P, body: imp });
-  if (r.status !== 201) console.log('   DEBUG', r.status, JSON.stringify(r.json).slice(0, 300));
   ok(r.status === 201 && r.json.chapter.questions.length === 20 && r.json.chapter.evaluationQuestions.length === 15, 'import JSON collé (avec ```json et texte autour) → brouillon 20 + 15');
   ok(r.json.chapter.questions.reduce((a, q) => a + q.weight, 0) === 20 && r.json.chapter.evaluationQuestions.reduce((a, q) => a + q.weight, 0) === 20, 'import : chaque banque rééquilibrée à 20 points');
   ok(mockState.calls === callsImp, 'import : aucun appel à Gemini');

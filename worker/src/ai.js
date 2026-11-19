@@ -76,7 +76,8 @@ async function geminiFetch(env, path, init) {
         throw err;
       }
       if (r.status === 401 || r.status === 403) throw new AiError('Clé Gemini refusée ou non autorisée.', 502);
-      const err = new AiError(r.status === 503 || r.status === 500 ? 'Gemini est surchargé en ce moment. Réessaie dans quelques minutes.' : `Erreur Gemini (${r.status}).`, 502);
+      const detail = String(json?.error?.message || '').slice(0, 140);
+      const err = new AiError((r.status === 503 || r.status === 500 ? 'Gemini est surchargé en ce moment. Réessaie dans quelques minutes.' : `Erreur Gemini (${r.status}).`) + (detail ? ` [${detail}]` : ''), 502);
       err.retry = r.status === 503 || r.status === 500;
       throw err;
     }
@@ -99,6 +100,13 @@ export function chooseFlashModel(names) {
   const other = names.filter((n) => /flash/.test(n) && !/(lite|image|tts|live|audio|preview|thinking|exp|robotics)/.test(n));
   return other[0] || null;
 }
+export function flashCandidates(names) {
+  const ver = (n) => parseFloat((/^gemini-(\d+(?:\.\d+)?)-/.exec(n) || [])[1] || 0);
+  const ok = (n) => /^gemini-\d+(?:\.\d+)?-flash(-lite)?$/.test(n);
+  const flash = names.filter((n) => ok(n) && !/lite/.test(n)).sort((a, b) => ver(b) - ver(a));
+  const lite = names.filter((n) => ok(n) && /lite/.test(n)).sort((a, b) => ver(b) - ver(a));
+  return [...flash, ...lite, 'gemini-flash-latest'];
+}
 async function pickModel(env) {
   const name = chooseFlashModel(await listModels(env));
   if (!name) throw new AiError('Aucun modèle Gemini Flash disponible pour cette clé. Utilise « Tester Gemini ».', 502);
@@ -108,8 +116,8 @@ async function pickModel(env) {
 
 const PROVIDERS = {
   async gemini(env, { subject, level, title, courseText, images }) {
-    let model = pickedModel || env.GEMINI_MODEL || 'gemini-flash-latest';
-    if (!/^[a-z0-9.\-]{3,60}$/.test(model)) throw new AiError('Nom de modèle invalide.', 500);
+    const startModel = pickedModel || env.GEMINI_MODEL || 'gemini-flash-latest';
+    if (!/^[a-z0-9.\-]{3,60}$/.test(startModel)) throw new AiError('Nom de modèle invalide.', 500);
     const parts = [{ text: `Matière : ${subject}\nNiveau : ${level}\nTitre du chapitre : ${title}\n\n${courseText ? 'Texte du cours :\n' + courseText : 'Le cours est fourni en photos ci-dessous.'}` }];
     for (const im of images) parts.push({ inlineData: { mimeType: im.mime, data: im.data } });
     // Deux demandes en parallèle (une par banque) : deux fois moins de texte à produire par appel, donc bien plus rapide.
@@ -128,19 +136,31 @@ const PROVIDERS = {
           ...(withThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
         },
       });
+      let model = startModel;
       let json;
       let withThinking = true;
       let triedPick = false;
-      for (let attempt = 0; ; attempt++) {
+      let chain = null, idx = 0, failed = [];
+      let attempt = 0;
+      for (;;) {
         try {
           json = await geminiFetch(env, `/v1beta/models/${model}:generateContent`, { method: 'POST', body: body(withThinking) });
+          pickedModel = model; // on garde le modèle qui répond pour les demandes suivantes
           break;
         } catch (e) {
           // Certains modèles refusent thinkingBudget=0 : on réessaie sans.
           if (e && e.httpStatus === 404 && !triedPick) { triedPick = true; model = await pickModel(env); continue; }
           if (withThinking && e && e.httpStatus === 400) { withThinking = false; continue; }
-          // Gemini surchargé (503/500) : jusqu'à 4 essais espacés.
-          if (e && e.retry && attempt < 3) { await new Promise((r) => setTimeout(r, 4000 * (attempt + 1))); continue; }
+          if (e && e.retry) {
+            // Gemini surchargé (503/500) : 3 essais espacés sur ce modèle…
+            if (attempt < 2) { attempt++; await new Promise((r) => setTimeout(r, 4000 * attempt)); continue; }
+            // …puis on passe au modèle Flash suivant (le plus récent est souvent le plus encombré).
+            failed.push(model);
+            if (!chain) chain = flashCandidates(await listModels(env));
+            const next = chain.find((n) => !failed.includes(n));
+            if (next && failed.length < 4) { model = next; attempt = 0; continue; }
+            throw new AiError(`Gemini est surchargé sur tous les modèles essayés (${failed.join(', ')}). Réessaie dans quelques minutes.`, 502);
+          }
           throw e;
         }
       }

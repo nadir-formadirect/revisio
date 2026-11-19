@@ -25,6 +25,7 @@ export function startMockGemini(port = 8799) {
       if (req.headers['x-goog-api-key'] !== 'test-key-SECRET-ne-doit-jamais-sortir') return send(403, { error: 'bad key' });
       if (req.url.startsWith('/v1beta/models?')) return send(200, { models: [{ name: 'models/gemini-flash-latest', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-3-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-4-flash-preview', supportedGenerationMethods: ['generateContent'] }, { name: 'models/embedding-001', supportedGenerationMethods: ['embedContent'] }] });
       if (state.mode === 'oldmodel' && !req.url.includes('/gemini-3-flash:')) return send(404, { error: { message: 'model not found' } });
+      if (state.mode === 'busy' && !req.url.includes('/gemini-flash-latest:')) return send(503, { error: { message: 'This model is currently experiencing high demand.' } });
       if (state.mode === '429') return send(429, { error: { message: 'quota' } });
       if (state.mode === 'garbage') return send(200, { candidates: [{ content: { parts: [{ text: 'pas du json {' }] } }] });
       if (state.mode === 'blocked') return send(200, { promptFeedback: { blockReason: 'SAFETY' } });
