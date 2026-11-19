@@ -101,10 +101,16 @@ try {
   mockState.mode = 'oldmodel';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle retiré', courseText: course } });
   ok(r.status === 201 && /gemini-3-flash:/.test(mockState.last?.url || ''), 'modèle retiré (404) → choix automatique du Flash stable le plus récent (ni lite ni preview)');
+  ok(mockState.last?.body?.generationConfig?.thinkingConfig?.thinkingLevel === 'low', 'modèle de génération 3+ → réflexion réglée sur thinkingLevel=low');
+  mockState.mode = 'ok';
   mockState.mode = 'ok';
   mockState.mode = 'busy';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle saturé', courseText: course } });
   ok(r.status === 201 && /gemini-flash-latest:/.test(mockState.last?.url || ''), 'modèle surchargé (503) → bascule automatique sur un autre modèle');
+  mockState.mode = 'ok';
+  mockState.mode = 'gw524';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Passerelle lente', courseText: course } });
+  ok(r.status === 201, 'erreur 524 (trop lent) → bascule directe sur un autre modèle, sans réessayer le même');
   mockState.mode = 'ok';
   mockState.mode = '429';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
@@ -113,10 +119,10 @@ try {
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
   ok(r.status === 502, 'réponse Gemini illisible → 502 propre');
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
-  ok(r.status === 502, '6e génération du jour encore permise (plafond = 6)');
+  ok(r.status === 502, '7e génération du jour encore permise (plafond = 7)');
   const callsBefore = mockState.calls;
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'X', courseText: course } });
-  ok(r.status === 429 && /Plafond quotidien/.test(r.json.error) && mockState.calls === callsBefore, '7e génération : plafond quotidien atteint, aucun appel Gemini émis');
+  ok(r.status === 429 && /Plafond quotidien/.test(r.json.error) && mockState.calls === callsBefore, '8e génération : plafond quotidien atteint, aucun appel Gemini émis');
   mockState.mode = 'ok';
   // --- Import manuel (réponse collée depuis ChatGPT/Claude) ---
   const mk = (n, tag) => Array.from({ length: n }, (_, k) => ({ topic: `Notion ${1 + (k % 4)}`, prompt: `${tag} question ${k} ?`, type: 'single', options: ['A', 'B', 'C'], correct: ['B'], explanation: `Parce que B (${k}).`, weight: 1 + (k % 3) }));

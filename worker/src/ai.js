@@ -58,7 +58,7 @@ const GEMINI_ORIGIN = (env) => (env.GEMINI_BASE_URL || 'https://generativelangua
 async function geminiFetch(env, path, init) {
   if (!env.GEMINI_API_KEY) throw new AiError("La clé Gemini n'est pas configurée sur le serveur.", 503);
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 150_000);
+  const timer = setTimeout(() => ctrl.abort(), 90_000);
   try {
     const r = await fetch(GEMINI_ORIGIN(env) + path, {
       ...init,
@@ -77,14 +77,15 @@ async function geminiFetch(env, path, init) {
       }
       if (r.status === 401 || r.status === 403) throw new AiError('Clé Gemini refusée ou non autorisée.', 502);
       const detail = String(json?.error?.message || '').slice(0, 140);
-      const err = new AiError((r.status === 503 || r.status === 500 ? 'Gemini est surchargé en ce moment. Réessaie dans quelques minutes.' : `Erreur Gemini (${r.status}).`) + (detail ? ` [${detail}]` : ''), 502);
-      err.retry = r.status === 503 || r.status === 500;
+      const err = new AiError((r.status === 504 || r.status === 524 ? `Gemini a mis trop de temps à répondre (${r.status}).` : r.status === 503 || r.status === 500 ? 'Gemini est surchargé en ce moment. Réessaie dans quelques minutes.' : `Erreur Gemini (${r.status}).`) + (detail ? ` [${detail}]` : ''), 502);
+      err.retry = [500, 502, 503, 504, 524].includes(r.status);
+      if (r.status === 504 || r.status === 524) err.skipModel = true; // trop lent : inutile de réessayer le même modèle
       throw err;
     }
     return json;
   } catch (e) {
     if (e instanceof AiError) throw e;
-    if (e.name === 'AbortError') throw new AiError("Gemini n'a pas répondu à temps.", 504);
+    if (e.name === 'AbortError') { const err = new AiError("Gemini n'a pas répondu à temps.", 504); err.retry = true; err.skipModel = true; throw err; }
     throw new AiError('Gemini est injoignable.', 502);
   } finally {
     clearTimeout(timer);
@@ -133,10 +134,11 @@ const PROVIDERS = {
           responseMimeType: 'application/json',
           responseSchema: schema([bank]),
           temperature: 0.4,
-          ...(withThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          ...(withThinking ? { thinkingConfig: /^gemini-(?:[3-9]|\d{2})/.test(model) ? { thinkingLevel: 'low' } : { thinkingBudget: 0 } } : {}),
         },
       });
       let model = startModel;
+      const t0 = Date.now();
       let json;
       let withThinking = true;
       let triedPick = false;
@@ -153,9 +155,10 @@ const PROVIDERS = {
           if (withThinking && e && e.httpStatus === 400) { withThinking = false; continue; }
           if (e && e.retry) {
             // Gemini surchargé (503/500) : 3 essais espacés sur ce modèle…
-            if (attempt < 2) { attempt++; await new Promise((r) => setTimeout(r, 4000 * attempt)); continue; }
+            if (!e.skipModel && attempt < 2) { attempt++; await new Promise((r) => setTimeout(r, 4000 * attempt)); continue; }
             // …puis on passe au modèle Flash suivant (le plus récent est souvent le plus encombré).
             failed.push(model);
+            if (Date.now() - t0 > 200_000) throw new AiError('Gemini est trop lent en ce moment. Réessaie dans quelques minutes.', 504);
             if (!chain) chain = flashCandidates(await listModels(env));
             const next = chain.find((n) => !failed.includes(n));
             if (next && failed.length < 4) { model = next; attempt = 0; continue; }
