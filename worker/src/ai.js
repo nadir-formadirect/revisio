@@ -282,3 +282,20 @@ export async function generateDraft(env, input) {
   const suffix = Math.random().toString(36).slice(2, 6);
   return buildChapter(input, aiJson, suffix);
 }
+
+// Import manuel : le parent colle la réponse JSON d'un autre assistant (ChatGPT, Claude…). Même nettoyage que pour Gemini.
+export function parseImported(text) {
+  let t = String(text || '').trim();
+  if (!t) throw new AiError('Colle la réponse JSON de l’assistant.', 400);
+  if (t.length > 300_000) throw new AiError('Réponse trop longue.', 400);
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new AiError('Aucun JSON trouvé dans ce que tu as collé.', 400);
+  t = t.slice(a, b + 1);
+  try { return JSON.parse(t); } catch { throw new AiError('Ce texte n’est pas un JSON valide (il a peut-être été coupé). Redemande à l’assistant de répondre en entier.', 400); }
+}
+
+export function importDraft(input, text) {
+  const aiJson = parseImported(text);
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return buildChapter(input, aiJson, suffix);
+}

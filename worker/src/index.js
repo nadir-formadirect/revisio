@@ -4,7 +4,7 @@
 // - Secrets uniquement côté serveur : GEMINI_API_KEY, PARENT_PASSWORD, SESSION_SECRET.
 
 import { validateChapter } from './validate.js';
-import { AiError, checkGenerateInput, generateDraft, listModels, normalizeWeights } from './ai.js';
+import { AiError, checkGenerateInput, generateDraft, importDraft, listModels, normalizeWeights } from './ai.js';
 
 const enc = new TextEncoder();
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -359,6 +359,19 @@ async function route(req, env, url) {
     if (path === '/api/parent/ai/models' && method === 'GET') {
       try { return json({ models: await listModels(env), current: env.GEMINI_MODEL || 'gemini-flash-latest' }); }
       catch (e) { if (e instanceof AiError) throw new HttpError(e.status, e.message); throw e; }
+    }
+    if (path === '/api/parent/ai/import' && method === 'POST') {
+      const body = await readBody(req, 400_000);
+      let result;
+      try {
+        const clean = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+        const input = { subject: clean(body?.subject, 60), level: clean(body?.level, 20), title: clean(body?.title, 120) };
+        if (!input.subject || !input.level || !input.title) throw new AiError('Matière, niveau et titre sont obligatoires.', 400);
+        result = importDraft(input, body?.json);
+      } catch (e) { if (e instanceof AiError) throw new HttpError(e.status, e.message); throw e; }
+      try { validateChapter(result.chapter); } catch (e) { throw new HttpError(422, `Brouillon invalide : ${e.message}`); }
+      await saveDraft(env, result.chapter, result.warnings);
+      return json({ id: result.chapter.id, chapter: result.chapter, warnings: result.warnings }, 201);
     }
     if (path === '/api/parent/ai/generate' && method === 'POST') {
       const body = await readBody(req, 7_000_000);
