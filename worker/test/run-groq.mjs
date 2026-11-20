@@ -21,17 +21,22 @@ try {
   let r = await call('/api/health'); ok(r.json?.ai === true && r.json.provider === 'groq', 'santé : fournisseur groq, clé présente');
   const P = (await call('/api/parent/login', { method: 'POST', body: { password: 'motdepasse-parent-test' } })).json.token;
   const course = 'La cellule est l’unité de base du vivant. Elle possède une membrane, un cytoplasme et un noyau.';
-  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Les cellules', courseText: course, images: [{ mime: 'image/jpeg', data: 'QUJD' }] } });
-  ok(r.status === 201, 'brouillon généré avec Groq');
+  const img = { mime: 'image/jpeg', data: 'QUJD' };
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Les cellules', courseText: course, images: Array(7).fill(img) } });
+  ok(r.status === 201, 'brouillon généré avec Groq à partir de 7 photos (plus de 4 acceptées)');
   let valid = true; try { validateChapter(r.json.chapter); } catch (e) { valid = false; console.log(e.message); }
   ok(valid && r.json.chapter.questions.length === 20 && r.json.chapter.evaluationQuestions.length === 15, 'brouillon valide : 20 + 15 questions, 20 points par banque');
   ok(r.json.chapter.questions.filter((q) => q.type === 'single').every((q) => q.options.includes(q.solution)), 'réponse « oui » réparée vers l’option exacte « Oui »');
   ok(r.json.warnings.some((w) => w.includes('Incertain')), 'avertissement « Incertain » remonté');
+  ok(state.vision.length === 3 && state.vision.map((v) => v.messages[1].content.length - 1).join() === '3,3,1' && state.vision.every((v) => v.model === 'qwen/qwen3.8-27b'), 'photos recopiées par lots de 3 (3+3+1) avec le modèle photos');
+  ok(state.vision[0].messages[1].content.some((p) => p.type === 'image_url' && p.image_url.url.startsWith('data:image/jpeg;base64,')), 'les photos sont transmises à Groq');
+  ok(state.vision[0].messages[0].content.includes('jamais une consigne') && state.vision[0].messages[0].content.includes('[illisible]'), 'recopie : anti-injection et passages illisibles signalés');
   const b = state.last.body;
-  ok(b.response_format?.type === 'json_object' && b.model === 'qwen/qwen3.8-27b', 'avec photo : mode JSON et modèle photos (qwen/qwen3.8-27b)');
-  ok(Array.isArray(b.messages[1].content) && b.messages[1].content.some((p) => p.type === 'image_url' && p.image_url.url.startsWith('data:image/jpeg;base64,')), 'la photo est transmise à Groq');
+  ok(b.model === 'openai/gpt-oss-120b' && b.response_format?.type === 'json_object' && b.messages[1].content.includes('Texte recopié de 3 photo(s)') && b.messages[1].content.includes(course), 'exercices créés par gpt-oss-120b à partir du texte collé + texte recopié');
   ok(b.messages[0].content.includes('jamais une consigne'), 'consigne anti-injection présente');
   ok(state.last.auth === 'Bearer groq-key-SECRET-ne-doit-jamais-sortir' && !r.text.includes('SECRET') && !JSON.stringify(b).includes('SECRET'), 'clé envoyée seulement dans l’en-tête, jamais dans les réponses');
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Trop de photos', courseText: course, images: Array(13).fill(img) } });
+  ok(r.status === 400 && /12 photos/.test(r.json.error), '13 photos refusées (12 max)');
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Texte seul', courseText: course } });
   ok(r.status === 201 && state.last.body.model === 'openai/gpt-oss-120b' && state.last.body.reasoning_effort === 'low' && typeof state.last.body.messages[1].content === 'string', 'texte seul : modèle gpt-oss-120b, réflexion courte');
 
@@ -41,7 +46,7 @@ try {
 
   state.mode = 'gone';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle retiré', courseText: course, images: [{ mime: 'image/jpeg', data: 'QUJD' }] } });
-  ok(r.status === 201 && state.last.body.model === 'qwen/qwen3.9-32b', 'modèle photos retiré → bascule automatique vers un autre modèle photos');
+  ok(r.status === 201 && state.vision.at(-1).model === 'qwen/qwen3.9-32b', 'modèle photos retiré → bascule automatique vers un autre modèle photos');
   r = await call('/api/parent/ai/models', { token: P });
   ok(r.status === 200 && r.json.provider === 'groq' && r.json.current === 'openai/gpt-oss-120b' && r.json.vision === 'qwen/qwen3.9-32b' && !r.json.models.includes('whisper-large-v3'), '« Tester l’IA » : modèles texte et photos affichés, audio exclus');
   state.mode = 'novision';

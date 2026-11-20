@@ -1,7 +1,7 @@
 import http from 'node:http';
 // Faux serveur Groq (API compatible OpenAI) pour les tests.
 export function startMockGroq(port = 8798) {
-  const state = { mode: 'ok', calls: 0, last: null, models: [], tpm: 0 };
+  const state = { mode: 'ok', calls: 0, last: null, models: [], tpm: 0, vision: [] };
   const q = (type, i, extra = {}) => ({ topic: `Notion ${1 + (i % 4)}`, prompt: `Question ${type} ${i} ?`, type, explanation: `Explication ${i}.`, weight: 1 + (i % 3), ...extra });
   const bank = (n, tag) => Array.from({ length: n }, (_, k) => (k % 6 === 5 ? q('text', k, { prompt: `${tag} courte ${k} ?`, correct: ['mot'], accepted: ['Mot'] }) : q('single', k, { prompt: `${tag} choix ${k} ?`, options: ['Oui', 'Non', 'Parfois'], correct: ['oui'] })));
   const server = http.createServer((req, res) => {
@@ -21,6 +21,7 @@ export function startMockGroq(port = 8798) {
       if (state.mode === 'garbage') return send(200, { choices: [{ message: { content: 'pas du json {' } }] });
       state.models.push(b.model);
       const sys = b.messages[0].content;
+      if (sys.startsWith('Tu recopies')) { state.vision.push(b); return send(200, { choices: [{ message: { content: `Texte recopié de ${b.messages[1].content.length - 1} photo(s). La cellule a un [illisible].` } }] }); }
       const out = sys.includes('UNIQUEMENT la banque "training"') ? { warnings: ['Incertain : ligne 2 illisible'], training: bank(20, 'T') } : { warnings: [], evaluation: bank(15, 'E') };
       send(200, { choices: [{ message: { content: JSON.stringify(out) } }] });
     });

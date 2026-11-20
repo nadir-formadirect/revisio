@@ -374,7 +374,7 @@ async function route(req, env, url) {
       return json({ id: result.chapter.id, chapter: result.chapter, warnings: result.warnings }, 201);
     }
     if (path === '/api/parent/ai/generate' && method === 'POST') {
-      const body = await readBody(req, 7_000_000);
+      const body = await readBody(req, 12_000_000); // jusqu'à 12 photos réduites
       let input;
       try { input = checkGenerateInput(body); } catch (e) { if (e instanceof AiError) throw new HttpError(e.status, e.message); throw e; }
       await aiQuota(env);

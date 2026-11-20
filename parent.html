@@ -115,9 +115,29 @@ function sessionView(s){
 
 // ---- création de cours par IA ----
 async function shrink(file){
-  const bmp=await createImageBitmap(file);const max=1600;const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+  const bmp=await createImageBitmap(file);const max=1400;const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
   const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
-  const url=c.toDataURL('image/jpeg',0.8);return {mime:'image/jpeg',data:url.split(',')[1],preview:url};
+  const url=c.toDataURL('image/jpeg',0.75);return {mime:'image/jpeg',data:url.split(',')[1],preview:url};
+}
+// ---- PDF : texte extrait sur l'appareil ; pages scannées (sans texte) converties en photos ----
+const MAX_PHOTOS=12,MAX_TEXT=40000;
+let pdfjsP=null;
+function loadPdfJs(){return pdfjsP||(pdfjsP=new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';ok(window.pdfjsLib)};s.onerror=()=>{pdfjsP=null;ko(new Error('Lecteur PDF indisponible : vérifie ta connexion.'))};document.head.append(s)}))}
+async function readPdf(file,room){
+  const lib=await loadPdfJs();
+  const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;
+  const n=Math.min(pdf.numPages,40);let text='';const images=[];let skipped=pdf.numPages-n;
+  for(let i=1;i<=n;i++){
+    const page=await pdf.getPage(i);const tc=await page.getTextContent();
+    const t=tc.items.map(x=>x.str+(x.hasEOL?'\n':' ')).join('').replace(/[ \t]+/g,' ').trim();
+    if(t.length>=80){text+='\n\n— Page '+i+' —\n'+t;continue}
+    if(images.length>=room){skipped++;continue}
+    const v1=page.getViewport({scale:1});const vp=page.getViewport({scale:Math.min(2.5,1400/Math.max(v1.width,v1.height))});
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+    await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    const url=c.toDataURL('image/jpeg',0.75);images.push({mime:'image/jpeg',data:url.split(',')[1],preview:url});
+  }
+  return {text:text.trim(),images,pages:pdf.numPages,skipped};
 }
 
 const IMPORT_PROMPT=`Tu es un concepteur pédagogique pour des élèves de collège (France). À partir du cours que je te fournis (photos de cahier et/ou texte), prépare des exercices de révision.
@@ -154,20 +174,43 @@ function aiView(){
   const subject=h('input',{class:'control',list:'subjects',placeholder:'Ex. : SVT, Mathématiques…'});
   const dl=h('datalist',{id:'subjects'},['Mathématiques','Espagnol','Anglais LV1','Technologie','SVT','Français','Histoire-Géographie','Physique-Chimie'].map(v=>h('option',{value:v})));
   const level=h('input',{class:'control',value:'5e'});const title=h('input',{class:'control',placeholder:'Ex. : Les cellules'});
-  const text=h('textarea',{class:'control',rows:'8',placeholder:'Colle ici le texte du cours (ou ajoute des photos de cahier ci-dessous)…'});
+  const text=h('textarea',{class:'control',rows:'8',placeholder:'Colle ici le texte du cours, ou ajoute des photos / un PDF ci-dessous…'});
   const thumbs=h('div',{class:'thumbs'});const err=h('p',{class:'err','aria-live':'polite'});
-  const pick=h('input',{type:'file',accept:'image/*',multiple:true,class:'hidden',onchange:async e=>{err.textContent='';try{for(const f of [...e.target.files]){if(state.images.length>=4)break;const im=await shrink(f);state.images.push(im);thumbs.append(h('img',{src:im.preview,alt:'Photo du cours'}))}}catch{err.textContent='Photo illisible.'}e.target.value=''}});
+  const info=h('p',{class:'muted','aria-live':'polite'});
+  const clearBtn=h('button',{class:'btn sec sm hidden',onclick:()=>{state.images=[];thumbs.replaceChildren();count()}},'Retirer les photos');
+  const count=()=>{clearBtn.classList.toggle('hidden',!state.images.length);addBtn.textContent='📎 Ajouter photos ou PDF ('+state.images.length+'/'+MAX_PHOTOS+' photos)'};
+  const addImg=im=>{state.images.push(im);thumbs.append(h('img',{src:im.preview,alt:'Page du cours'}))};
+  const pick=h('input',{type:'file',accept:'image/*,application/pdf,.pdf',multiple:true,class:'hidden',onchange:async e=>{
+    err.textContent='';const files=[...e.target.files];e.target.value='';
+    for(const f of files){
+      try{
+        if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){
+          info.textContent='Lecture du PDF « '+f.name+' »…';
+          const r=await readPdf(f,MAX_PHOTOS-state.images.length);
+          if(r.text)text.value=(text.value.trim()?text.value.trim()+'\n\n':'')+r.text;
+          r.images.forEach(addImg);
+          info.textContent='PDF « '+f.name+' » : '+r.pages+' page(s)'+(r.text?' · texte ajouté dans la zone ci-dessus (relis-le)':'')+(r.images.length?' · '+r.images.length+' page(s) scannée(s) ajoutée(s) en photo':'')+(r.skipped?' · '+r.skipped+' page(s) ignorée(s) (limite atteinte)':'');
+        }else{
+          if(state.images.length>=MAX_PHOTOS){err.textContent=MAX_PHOTOS+' photos maximum par cours.';break}
+          addImg(await shrink(f));
+        }
+      }catch(x){err.textContent=x&&/PDF/.test(x.message||'')?x.message:'Fichier illisible : '+f.name}
+    }
+    count();
+  }});
+  const addBtn=h('button',{class:'btn sec sm',onclick:()=>pick.click()},'');
   const result=h('div',{});
   const btn=h('button',{class:'btn',onclick:async()=>{
-    err.textContent='';btn.disabled=true;btn.textContent='Génération en cours… (jusqu’à 1 minute)';result.replaceChildren();
-    try{const r=await api('/api/parent/ai/generate',{method:'POST',body:JSON.stringify({subject:subject.value,level:level.value,title:title.value,courseText:text.value,images:state.images.map(i=>({mime:i.mime,data:i.data}))})});state.images=[];thumbs.replaceChildren();result.replaceChildren(draftView({id:r.id,status:'draft',warnings:r.warnings,chapter:r.chapter}))}
+    err.textContent='';if(text.value.length>MAX_TEXT){err.textContent='Texte trop long ('+text.value.length+' caractères, '+MAX_TEXT+' max) : découpe le cours en deux chapitres.';return}btn.disabled=true;btn.textContent='Génération en cours… (1 à 3 minutes, ne ferme pas la page)';result.replaceChildren();
+    try{const r=await api('/api/parent/ai/generate',{method:'POST',body:JSON.stringify({subject:subject.value,level:level.value,title:title.value,courseText:text.value,images:state.images.map(i=>({mime:i.mime,data:i.data}))})});state.images=[];thumbs.replaceChildren();count();info.textContent='';result.replaceChildren(draftView({id:r.id,status:'draft',warnings:r.warnings,chapter:r.chapter}))}
     catch(e){err.textContent=e.message}finally{btn.disabled=false;btn.textContent='Générer le brouillon'}}},'Générer le brouillon');
+  count();
   return [h('div',{class:'card'},h('h2',{},'Créer un cours à partir du cahier'),
     h('p',{class:'muted'},'L’IA propose un chapitre complet (20 exercices d’entraînement + 15 de contrôle, chaque banque sur 20 points). Rien n’est visible par les enfants tant que tu n’as pas relu et publié. La note finale reste calculée par règles, pas par l’IA.'),
-    h('div',{class:'warn-box'},'Les photos et le texte sont envoyés au service d’IA (Groq). Ne photographie que le cours : pas de nom, de visage ni d’information personnelle.'),
+    h('div',{class:'warn-box'},'Les photos, PDF et texte sont envoyés au service d’IA (Groq). Ne photographie que le cours : pas de nom, de visage ni d’information personnelle.'),
     h('label',{class:'l'},'Matière'),subject,dl,h('label',{class:'l'},'Niveau'),level,h('label',{class:'l'},'Titre du chapitre'),title,
     h('label',{class:'l'},'Texte du cours'),text,
-    h('div',{class:'row',style:'margin-top:10px'},h('button',{class:'btn sec sm',onclick:()=>pick.click()},'📷 Ajouter des photos (4 max)'),pick),thumbs,err,
+    h('div',{class:'row',style:'margin-top:10px'},addBtn,clearBtn,pick),info,thumbs,err,
     h('div',{class:'row',style:'margin-top:12px'},btn)),result,...importCard()];
 }
 
