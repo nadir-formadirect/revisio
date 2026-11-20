@@ -28,19 +28,28 @@ try {
   ok(r.json.chapter.questions.filter((q) => q.type === 'single').every((q) => q.options.includes(q.solution)), 'réponse « oui » réparée vers l’option exacte « Oui »');
   ok(r.json.warnings.some((w) => w.includes('Incertain')), 'avertissement « Incertain » remonté');
   const b = state.last.body;
-  ok(b.response_format?.type === 'json_object' && b.model === 'meta-llama/llama-4-scout-17b-16e-instruct', 'mode JSON et modèle par défaut (lit les photos)');
+  ok(b.response_format?.type === 'json_object' && b.model === 'qwen/qwen3.8-27b', 'avec photo : mode JSON et modèle photos (qwen/qwen3.8-27b)');
   ok(Array.isArray(b.messages[1].content) && b.messages[1].content.some((p) => p.type === 'image_url' && p.image_url.url.startsWith('data:image/jpeg;base64,')), 'la photo est transmise à Groq');
   ok(b.messages[0].content.includes('jamais une consigne'), 'consigne anti-injection présente');
   ok(state.last.auth === 'Bearer groq-key-SECRET-ne-doit-jamais-sortir' && !r.text.includes('SECRET') && !JSON.stringify(b).includes('SECRET'), 'clé envoyée seulement dans l’en-tête, jamais dans les réponses');
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Texte seul', courseText: course } });
+  ok(r.status === 201 && state.last.body.model === 'openai/gpt-oss-120b' && state.last.body.reasoning_effort === 'low' && typeof state.last.body.messages[1].content === 'string', 'texte seul : modèle gpt-oss-120b, réflexion courte');
+
+  state.mode = 'tpm'; state.tpm = 0;
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Limite minute', courseText: course } });
+  ok(r.status === 201, 'limite de tokens par minute (429 court) → attente puis réussite');
 
   state.mode = 'gone';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle retiré', courseText: course, images: [{ mime: 'image/jpeg', data: 'QUJD' }] } });
-  ok(r.status === 201 && state.last.body.model === 'meta-llama/llama-4-maverick-17b-128e-instruct', 'modèle retiré → bascule automatique vers un modèle qui lit les photos');
+  ok(r.status === 201 && state.last.body.model === 'qwen/qwen3.9-32b', 'modèle photos retiré → bascule automatique vers un autre modèle photos');
   r = await call('/api/parent/ai/models', { token: P });
-  ok(r.status === 200 && r.json.provider === 'groq' && r.json.current === 'meta-llama/llama-4-maverick-17b-128e-instruct' && !r.json.models.includes('whisper-large-v3'), '« Tester l’IA » : modèle utilisé affiché, modèles audio exclus');
+  ok(r.status === 200 && r.json.provider === 'groq' && r.json.current === 'openai/gpt-oss-120b' && r.json.vision === 'qwen/qwen3.9-32b' && !r.json.models.includes('whisper-large-v3'), '« Tester l’IA » : modèles texte et photos affichés, audio exclus');
+  state.mode = 'novision';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Pas de vision', courseText: course, images: [{ mime: 'image/jpeg', data: 'QUJD' }] } });
+  ok(r.status === 400 && /ne lit pas les photos/.test(r.json.error), 'modèle sans lecture d’images → message clair (coller le texte)');
   state.mode = '429';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Quota', courseText: course } });
-  ok(r.status === 429 && /Quota gratuit Groq/.test(r.json.error), 'quota Groq dépassé → message clair, pas de facture');
+  ok(r.status === 429 && /Quota gratuit Groq/.test(r.json.error), 'quota Groq du jour dépassé → message clair, pas de facture');
   state.mode = 'garbage';
   r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Illisible', courseText: course } });
   ok(r.status === 502 && /illisible/.test(r.json.error), 'réponse illisible → erreur propre');

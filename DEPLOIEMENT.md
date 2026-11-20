@@ -32,7 +32,7 @@ Dans `config.js`, mets `API_BASE: 'https://revisio-api.XXXX.workers.dev'` puis p
 - Supprimer un profil efface tout son historique.
 
 ## Fournisseur IA
-Par défaut : **Groq** (`AI_PROVIDER = "groq"`, modèle `GROQ_MODEL` dans `wrangler.toml`, qui lit les photos). Si ce modèle est retiré par Groq, le serveur en choisit automatiquement un autre. Gemini reste disponible en réserve (`AI_PROVIDER = "gemini"` + secret `GEMINI_API_KEY`).
+Par défaut : **Groq** (`AI_PROVIDER = "groq"`, `GROQ_MODEL` pour le texte du cours, `GROQ_VISION_MODEL` pour les photos, dans `wrangler.toml`). Si ce modèle est retiré par Groq, le serveur en choisit automatiquement un autre. Gemini reste disponible en réserve (`AI_PROVIDER = "gemini"` + secret `GEMINI_API_KEY`).
 
 La clé peut aussi être ajoutée sans ligne de commande : tableau de bord Cloudflare → Workers & Pages → `revisio-api` → Settings → Variables and Secrets → Add → type **Secret**, nom `GROQ_API_KEY`.
 
@@ -40,4 +40,4 @@ La clé peut aussi être ajoutée sans ligne de commande : tableau de bord Cloud
 Les conditions Gemini API (en vigueur au 23/03/2026) interdisent les services « dirigés vers des moins de 18 ans ou susceptibles d'être utilisés par eux » et imposent le palier **payant** pour des utilisateurs de l'EEE. Elles indiquent aussi que le palier gratuit sert à améliorer les produits Google. Ici, l'IA n'est appelée que depuis l'espace parent, mais la clause vise le service dans son ensemble : **prototype uniquement**. Pour un usage durable, changer de fournisseur ou passer au palier payant (ajouter une fonction dans `PROVIDERS` de `worker/src/ai.js`).
 
 ## Tests
-`cd worker && npm test` (API, 81 vérifications, Gemini et Groq simulés).
+`cd worker && npm test` (API, 84 vérifications, Gemini et Groq simulés).

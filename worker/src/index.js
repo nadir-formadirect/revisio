@@ -4,7 +4,7 @@
 // - Secrets uniquement côté serveur : GEMINI_API_KEY, PARENT_PASSWORD, SESSION_SECRET.
 
 import { validateChapter } from './validate.js';
-import { AiError, checkGenerateInput, currentModel, currentProvider, generateDraft, importDraft, listProviderModels, normalizeWeights, providerReady } from './ai.js';
+import { AiError, checkGenerateInput, currentModel, currentProvider, currentVisionModel, generateDraft, importDraft, listProviderModels, normalizeWeights, providerReady } from './ai.js';
 
 const enc = new TextEncoder();
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -357,7 +357,7 @@ async function route(req, env, url) {
     }
 
     if (path === '/api/parent/ai/models' && method === 'GET') {
-      try { const models = await listProviderModels(env); return json({ provider: currentProvider(env), models, current: currentModel(env) }); }
+      try { const models = await listProviderModels(env); return json({ provider: currentProvider(env), models, current: currentModel(env), vision: currentVisionModel(env) }); }
       catch (e) { if (e instanceof AiError) throw new HttpError(e.status, e.message); throw e; }
     }
     if (path === '/api/parent/ai/import' && method === 'POST') {

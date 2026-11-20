@@ -7,8 +7,9 @@ compatibility_date = "2025-09-01"
 ALLOWED_ORIGIN = "https://nadir-formadirect.github.io"
 # Fournisseur IA (voir src/ai.js) : "groq" (par défaut, rapide, gratuit) ou "gemini" (en réserve).
 AI_PROVIDER = "groq"
-# Modèle Groq qui lit les photos. S'il est retiré, le serveur en choisit un autre automatiquement.
-GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+# Modèles Groq : texte du cours / photos. S'ils sont retirés, le serveur en choisit d'autres automatiquement.
+GROQ_MODEL = "openai/gpt-oss-120b"
+GROQ_VISION_MODEL = "qwen/qwen3.8-27b"
 # Alias "latest" : évite de figer un modèle retiré. Vérifier avec le bouton « Tester Gemini » de l'espace parent.
 GEMINI_MODEL = "gemini-2.5-flash"
 # Plafond d'appels IA par jour (UTC) : garde-fou contre toute boucle ou abus.

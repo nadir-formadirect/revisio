@@ -179,7 +179,8 @@ const PROVIDERS = {
 };
 
 // ---------- Groq (API compatible OpenAI, palier gratuit sans carte bancaire) ----------
-const GROQ_DEFAULT_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'; // lit les photos, sortie JSON
+const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-120b'; // texte du cours (meilleure qualité disponible en gratuit)
+const GROQ_DEFAULT_VISION = 'qwen/qwen3.8-27b'; // photos du cahier
 const GROQ_ORIGIN = (env) => (env.GROQ_BASE_URL || 'https://api.groq.com').replace(/\/$/, '');
 const FORMAT = (bank) => `Réponds uniquement par un objet JSON de cette forme exacte :
 {"warnings": ["..."], "${bank}": [{"topic": "...", "prompt": "...", "type": "single|multi|text|manual", "options": ["..."], "correct": ["..."], "accepted": ["..."], "explanation": "...", "example": "...", "weight": 1}]}
@@ -199,7 +200,17 @@ async function groqFetch(env, path, init) {
     if (!r.ok) {
       const detail = String(json?.error?.message || '').slice(0, 160);
       const code = String(json?.error?.code || '');
-      if (r.status === 429) throw new AiError('Quota gratuit Groq atteint pour le moment. Réessaie dans quelques minutes.' + (detail ? ` [${detail}]` : ''), 429);
+      if (r.status === 429) {
+        const err = new AiError('Quota gratuit Groq atteint pour le moment. Réessaie dans quelques minutes.' + (detail ? ` [${detail}]` : ''), 429);
+        const wait = Number(r.headers.get('retry-after')) || Number((/try again in ([\d.]+)s/i.exec(detail) || [])[1]);
+        if (wait > 0 && wait <= 40) err.waitMs = Math.ceil(wait * 1000) + 500; // limite par minute : on patiente puis on réessaie
+        throw err;
+      }
+      if (r.status === 400 && /image|vision|multimodal|content.*type/i.test(detail)) {
+        const err = new AiError(`Le modèle Groq utilisé ne lit pas les photos. Colle plutôt le texte du cours, ou règle GROQ_VISION_MODEL. [${detail}]`, 400);
+        err.noVision = true;
+        throw err;
+      }
       if (r.status === 401 || r.status === 403) throw new AiError('Clé Groq refusée. Vérifie-la (npx wrangler secret put GROQ_API_KEY).', 502);
       if (r.status === 413) throw new AiError('Photos trop lourdes pour Groq : envoie moins de photos ou des photos plus légères.', 400);
       const err = new AiError(`Erreur Groq (${r.status}).` + (detail ? ` [${detail}]` : ''), 502);
@@ -221,28 +232,31 @@ async function listGroqModels(env) {
   const json = await groqFetch(env, '/openai/v1/models', { method: 'GET' });
   return (json?.data || []).filter((m) => m && m.active !== false).map((m) => String(m.id || '')).filter((id) => id && !/whisper|tts|guard|embed|orpheus/i.test(id));
 }
-// Modèle de remplacement si celui configuré a été retiré : on privilégie ceux qui lisent les images.
+// Modèle de remplacement si celui configuré a été retiré.
 export function chooseGroqModel(names, needVision) {
-  const vision = names.filter((n) => /llama-4|vision|scout|maverick/i.test(n));
-  const text = names.filter((n) => /gpt-oss-120b|llama-3\.3-70b|llama-4|qwen|kimi/i.test(n));
-  return (needVision ? vision[0] : vision[0] || text[0]) || null;
+  const vision = names.filter((n) => /llama-4|vision|scout|maverick|-vl|qwen3\.[5-9]|qwen[4-9]|gemma-?[3-9]/i.test(n));
+  const text = names.filter((n) => /gpt-oss-120b|llama-3\.3-70b|qwen|kimi|llama-4|gpt-oss/i.test(n));
+  return (needVision ? vision[0] : text[0]) || null;
 }
 
-let groqPicked = null;
+const groqPicked = { text: null, vision: null };
+const groqModelFor = (env, vision) => (vision ? groqPicked.vision || env.GROQ_VISION_MODEL || GROQ_DEFAULT_VISION : groqPicked.text || env.GROQ_MODEL || GROQ_DEFAULT_MODEL);
 PROVIDERS.groq = async function groq(env, { subject, level, title, courseText, images }) {
-  let model = groqPicked || env.GROQ_MODEL || GROQ_DEFAULT_MODEL;
-  if (!/^[\w.\-/]{3,100}$/.test(model)) throw new AiError('Nom de modèle Groq invalide.', 500);
+  const vision = images.length > 0;
+  let model = groqModelFor(env, vision);
   const intro = `Matière : ${subject}\nNiveau : ${level}\nTitre du chapitre : ${title}\n\n${courseText ? 'Texte du cours :\n' + courseText : 'Le cours est fourni en photos ci-dessous.'}`;
-  const content = images.length
+  const content = vision
     ? [{ type: 'text', text: intro }, ...images.map((im) => ({ type: 'image_url', image_url: { url: `data:${im.mime};base64,${im.data}` } }))]
     : intro;
   const ANGLE = {
     training: "Produis UNIQUEMENT la banque \"training\" : 20 questions d'entraînement (définitions, application directe, pièges courants).",
     evaluation: "Produis UNIQUEMENT la banque \"evaluation\" : 15 questions de contrôle (situations nouvelles, raisonnement, mise en application).",
   };
+  const t0 = Date.now();
   const one = async (bank) => {
-    let triedPick = false, retried = false;
+    let triedPick = false, retried = false, waited = 0;
     for (;;) {
+      if (!/^[\w.\-/]{3,100}$/.test(model)) throw new AiError('Nom de modèle Groq invalide.', 500);
       try {
         const json = await groqFetch(env, '/openai/v1/chat/completions', {
           method: 'POST',
@@ -251,21 +265,23 @@ PROVIDERS.groq = async function groq(env, { subject, level, title, courseText, i
             messages: [{ role: 'system', content: `${SYSTEM}\n\n${ANGLE[bank]}\n\n${FORMAT(bank)}` }, { role: 'user', content }],
             response_format: { type: 'json_object' },
             temperature: 0.4,
-            max_completion_tokens: 8000,
+            max_completion_tokens: 7000,
+            ...(/gpt-oss/.test(model) ? { reasoning_effort: 'low' } : {}),
           }),
         });
-        groqPicked = model;
+        groqPicked[vision ? 'vision' : 'text'] = model;
         const text = json?.choices?.[0]?.message?.content || '';
         if (!text) throw new AiError('Réponse Groq vide. Relance la génération.');
         try { return JSON.parse(text); } catch { throw new AiError('Groq a renvoyé un format illisible. Relance la génération.'); }
       } catch (e) {
         if (e?.modelGone && !triedPick) {
           triedPick = true;
-          const next = chooseGroqModel(await listGroqModels(env), images.length > 0);
-          if (!next || next === model) throw new AiError(`Le modèle Groq « ${model} » n'est plus disponible et aucun remplaçant n'a été trouvé. Utilise « Tester l'IA ».`, 502);
+          const next = chooseGroqModel((await listGroqModels(env)).filter((n) => n !== model), vision);
+          if (!next) throw new AiError(vision ? 'Aucun modèle Groq gratuit ne lit les photos en ce moment : colle plutôt le texte du cours.' : `Le modèle Groq « ${model} » n'est plus disponible. Utilise « Tester l'IA ».`, 502);
           model = next;
           continue;
         }
+        if (e?.waitMs && waited < 2 && Date.now() - t0 < 150_000) { waited++; await new Promise((r) => setTimeout(r, e.waitMs)); continue; }
         if (e?.retry && !retried) { retried = true; await new Promise((r) => setTimeout(r, 3000)); continue; }
         throw e;
       }
@@ -280,8 +296,9 @@ PROVIDERS.groq = async function groq(env, { subject, level, title, courseText, i
 
 export const currentProvider = (env) => (env.AI_PROVIDER || 'groq').trim();
 export function currentModel(env) {
-  return currentProvider(env) === 'groq' ? groqPicked || env.GROQ_MODEL || GROQ_DEFAULT_MODEL : pickedModel || env.GEMINI_MODEL || 'gemini-flash-latest';
+  return currentProvider(env) === 'groq' ? groqModelFor(env, false) : pickedModel || env.GEMINI_MODEL || 'gemini-flash-latest';
 }
+export const currentVisionModel = (env) => (currentProvider(env) === 'groq' ? groqModelFor(env, true) : null);
 export const providerReady = (env) => Boolean(currentProvider(env) === 'groq' ? env.GROQ_API_KEY : env.GEMINI_API_KEY);
 export const listProviderModels = (env) => (currentProvider(env) === 'groq' ? listGroqModels(env) : listModels(env));
 
