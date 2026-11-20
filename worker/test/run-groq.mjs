@@ -28,6 +28,9 @@ try {
   ok(valid && r.json.chapter.questions.length === 20 && r.json.chapter.evaluationQuestions.length === 15, 'brouillon valide : 20 + 15 questions, 20 points par banque');
   ok(r.json.chapter.questions.filter((q) => q.type === 'single').every((q) => q.options.includes(q.solution)), 'réponse « oui » réparée vers l’option exacte « Oui »');
   ok(r.json.warnings.some((w) => w.includes('Incertain')), 'avertissement « Incertain » remonté');
+  const L = r.json.chapter.lesson;
+  ok(Array.isArray(L) && L.length === 3 && L[1].kind === 'rappel' && L[2].examples.length === 3 && !L.some((c) => c.title === 'Carte vide'), 'fiche de cours : 3 cartes gardées (type inconnu → rappel, 3 exemples max, carte vide écartée)');
+  ok(state.bankSystems.slice(-2).every((t) => t.includes('« Notion 1 », « Notion 2 »')), 'les questions reprennent les notions de la fiche (rappel ciblé possible)');
   ok(state.vision.length === 3 && state.vision.map((v) => v.messages[1].content.length - 1).join() === '3,3,1' && state.vision.every((v) => v.model === 'qwen/qwen3.8-27b'), 'photos recopiées par lots de 3 (3+3+1) avec le modèle photos');
   ok(state.vision[0].messages[1].content.some((p) => p.type === 'image_url' && p.image_url.url.startsWith('data:image/jpeg;base64,')), 'les photos sont transmises à Groq');
   ok(state.vision[0].messages[0].content.includes('jamais une consigne') && state.vision[0].messages[0].content.includes('[illisible]'), 'recopie : anti-injection et passages illisibles signalés');

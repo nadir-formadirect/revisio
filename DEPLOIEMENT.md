@@ -40,4 +40,4 @@ La clé peut aussi être ajoutée sans ligne de commande : tableau de bord Cloud
 Les conditions Gemini API (en vigueur au 23/03/2026) interdisent les services « dirigés vers des moins de 18 ans ou susceptibles d'être utilisés par eux » et imposent le palier **payant** pour des utilisateurs de l'EEE. Elles indiquent aussi que le palier gratuit sert à améliorer les produits Google. Ici, l'IA n'est appelée que depuis l'espace parent, mais la clause vise le service dans son ensemble : **prototype uniquement**. Pour un usage durable, changer de fournisseur ou passer au palier payant (ajouter une fonction dans `PROVIDERS` de `worker/src/ai.js`).
 
 ## Tests
-`cd worker && npm test` (API, 87 vérifications, Gemini et Groq simulés).
+`cd worker && npm test` (API, 89 vérifications, Gemini et Groq simulés).

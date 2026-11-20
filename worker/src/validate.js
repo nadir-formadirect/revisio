@@ -35,6 +35,13 @@ export function validateChapter(c) {
   }
   const ids = checkBank(c.questions, 'Entraînement', new Set());
   if (c.evaluationQuestions !== undefined) checkBank(c.evaluationQuestions, 'Évaluation', ids);
+  if (c.lesson !== undefined) {
+    if (!Array.isArray(c.lesson) || !c.lesson.length || c.lesson.length > 30) throw new Error('Fiche de cours : nombre de cartes incorrect');
+    for (const k of c.lesson) {
+      if (!k || ['topic', 'title', 'text', 'kind'].some((f) => typeof k[f] !== 'string' || !k[f].trim())) throw new Error('Fiche de cours : carte incomplète');
+      if (k.examples !== undefined && (!Array.isArray(k.examples) || k.examples.some((x) => typeof x !== 'string'))) throw new Error('Fiche de cours : exemples incorrects');
+    }
+  }
   return c;
 }
 

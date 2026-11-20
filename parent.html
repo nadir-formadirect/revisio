@@ -149,8 +149,11 @@ Règles :
 - Types : "single" (1 bonne réponse parmi 3 à 5 options), "multi" (plusieurs bonnes réponses, 4 à 6 options), "text" (réponse courte sans ambiguïté), "manual" (justification libre, 2 maximum par banque).
 - Aucune question ne doit nécessiter de voir une image. Vérifie chaque réponse avant de la donner.
 
+- Ajoute une FICHE DE RÉVISION "lesson" de 8 à 14 cartes courtes, adaptée à la matière (définitions et vocabulaire ; règles de grammaire avec exemples et traduction pour les langues ; propriétés, méthodes et exemple résolu en maths). Les "topic" des cartes et des questions doivent être les mêmes.
+
 Réponds UNIQUEMENT avec un JSON valide (sans texte autour), de cette forme :
-{"warnings":["..."],"training":[Q,...],"evaluation":[Q,...]}
+{"warnings":["..."],"lesson":[L,...],"training":[Q,...],"evaluation":[Q,...]}
+où chaque L est : {"topic":"notion","kind":"definition|regle|methode|exemple|vocabulaire|attention|rappel","title":"5 mots maximum","text":"1 à 3 phrases simples","examples":["0 à 3 exemples courts"]}
 où chaque Q est :
 {"topic":"notion courte (3 à 6 notions par chapitre)","prompt":"énoncé","type":"single|multi|text|manual","options":["..."],"correct":["bonne(s) réponse(s), recopiée(s) à l'identique parmi options"],"accepted":["variantes acceptées (type text)"],"explanation":"correction en 1 à 3 phrases","example":"réponse type (type manual)","weight":1 à 3 selon la difficulté}
 Pour "text", "correct" contient la réponse canonique. Omet "options" pour "text" et "manual".`;
@@ -224,6 +227,14 @@ function bankView(chapter,key,label,markDirty){
     h('p',{class:'muted'},q.explanation),h('p',{class:'muted'},'Type : ',q.type,' · ',num(q.weight),' pt'),
     qs.length>5?h('button',{class:'btn danger sm',onclick:()=>{chapter[key].splice(i,1);markDirty()}},'Retirer cette question'):null)));
 }
+function lessonBlock(c,markDirty){
+  const L=Array.isArray(c.lesson)?c.lesson:[];
+  if(!L.length)return h('p',{class:'muted'},'Pas de fiche de cours pour ce chapitre.');
+  return h('details',{class:'q'},h('summary',{},h('strong',{},'📖 Fiche de cours · ',L.length,' carte',L.length>1?'s':''),h('span',{class:'muted'},' (lue par l’enfant avant de s’entraîner)')),
+    L.map((k,i)=>h('div',{style:'border-left:3px solid #6658dd;padding:6px 10px;margin:8px 0'},
+      h('div',{class:'row sb'},h('span',{},h('span',{class:'pill'},k.topic),' ',h('strong',{},k.title)),h('button',{class:'btn out sm',onclick:()=>{L.splice(i,1);if(!L.length)delete c.lesson;markDirty()}},'Retirer')),
+      h('p',{style:'margin:4px 0'},k.text),k.examples&&k.examples.length?h('ul',{},k.examples.map(x=>h('li',{},x))):null)));
+}
 function draftView(item){
   let dirty=false;const box=h('div',{class:'card'});
   const redraw=()=>{box.replaceChildren(...build())};
@@ -233,6 +244,7 @@ function draftView(item){
     h('p',{class:'muted'},c.subject,' · ',c.level),
     item.warnings&&item.warnings.length?h('div',{class:'warn-box'},h('strong',{},'À vérifier :'),h('ul',{},item.warnings.map(w=>h('li',{},w)))):null,
     h('div',{class:'warn-box'},'Relis les réponses attendues : l’IA peut se tromper. Ouvre chaque question et retire celles qui sont douteuses (le barème est rééquilibré à 20 points automatiquement).'),
+    lessonBlock(c,markDirty),
     bankView(c,'questions','Entraînement',markDirty),bankView(c,'evaluationQuestions','Contrôle',markDirty),
     h('div',{class:'row',style:'margin-top:14px'},
       dirty?h('button',{class:'btn sec',onclick:async()=>{const r=await api('/api/parent/chapters/'+item.id,{method:'PUT',body:JSON.stringify({chapter:c})});item.chapter=r.chapter;dirty=false;redraw();toast('Modifications enregistrées.')}},'Enregistrer les retraits'):null,

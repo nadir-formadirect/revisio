@@ -22,6 +22,12 @@ export function startMockGroq(port = 8798) {
       state.models.push(b.model);
       const sys = b.messages[0].content;
       if (sys.startsWith('Tu recopies')) { state.vision.push(b); return send(200, { choices: [{ message: { content: `Texte recopié de ${b.messages[1].content.length - 1} photo(s). La cellule a un [illisible].` } }] }); }
+      if (sys.includes('FICHE DE RÉVISION')) { state.lessonCalls = (state.lessonCalls || 0) + 1; return send(200, { choices: [{ message: { content: JSON.stringify({ warnings: [], lesson: [
+        { topic: 'Notion 1', kind: 'definition', title: 'La cellule', text: 'Unité de base du vivant.', examples: ['Cellule de peau'] },
+        { topic: 'Notion 1', kind: 'nimporte', title: 'Le noyau', text: 'Contient l’information génétique.' },
+        { topic: 'Notion 2', kind: 'attention', title: 'Piège', text: 'La paroi n’existe que chez les végétaux.', examples: ['a', 'b', 'c', 'd'] },
+        { topic: '', kind: 'regle', title: 'Carte vide', text: 'écartée' } ] }) } }] }); }
+      state.bankSystems = [...(state.bankSystems || []), sys];
       const out = sys.includes('UNIQUEMENT la banque "training"') ? { warnings: ['Incertain : ligne 2 illisible'], training: bank(20, 'T') } : { warnings: [], evaluation: bank(15, 'E') };
       send(200, { choices: [{ message: { content: JSON.stringify(out) } }] });
     });

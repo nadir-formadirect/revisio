@@ -70,3 +70,9 @@ Après un contrôle, les réponses erronées, non renseignées ou partiellement 
 L'application sélectionne jusqu'à 12 exercices issus de la banque d'entraînement, avec au maximum trois exercices par notion, et affiche une correction immédiate.
 La séance de remédiation affiche un score « exercices réussis / exercices proposés », **pas une nouvelle note sur 20**. Elle ne remplace pas le score du contrôle d'origine.
 Le bouton « Refaire un contrôle » permet ensuite de repasser la banque d'évaluation dans un ordre différent. Il ne s'agit pas d'un nouveau sujet généré par IA : pour l'instant, la banque comporte un sujet d'évaluation par chapitre.
+
+
+## Fiche de cours (« Revoir le cours »)
+Champ facultatif `lesson` d'un chapitre : 8 à 14 cartes courtes `{"topic","kind","title","text","examples"}`, `kind` parmi `definition`, `regle`, `methode`, `exemple`, `vocabulaire`, `attention`, `rappel`.
+Côté enfant : 3e mode « 📖 Revoir le cours » (lecture des cartes par notion), et pendant l'entraînement, en cas d'erreur, la ou les cartes de la même notion (`topic`) s'affichent sous la correction. L'évaluation reste sans aide.
+Les cours créés par l'IA (Groq) ou importés depuis ChatGPT/Claude contiennent la fiche ; les 5 chapitres d'origine n'en ont pas encore (le mode n'apparaît pas pour eux).
