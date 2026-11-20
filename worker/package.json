@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy",
     "db:init:local": "wrangler d1 execute revisio --local --persist-to .wrangler-state --file=schema.sql",
     "db:init": "wrangler d1 execute revisio --remote --file=schema.sql",
-    "test": "node test/run.mjs"
+    "test": "node test/run.mjs && node test/run-groq.mjs"
   },
   "devDependencies": {
     "wrangler": "^4"

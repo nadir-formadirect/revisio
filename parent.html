@@ -164,7 +164,7 @@ function aiView(){
     catch(e){err.textContent=e.message}finally{btn.disabled=false;btn.textContent='Générer le brouillon'}}},'Générer le brouillon');
   return [h('div',{class:'card'},h('h2',{},'Créer un cours à partir du cahier'),
     h('p',{class:'muted'},'L’IA propose un chapitre complet (20 exercices d’entraînement + 15 de contrôle, chaque banque sur 20 points). Rien n’est visible par les enfants tant que tu n’as pas relu et publié. La note finale reste calculée par règles, pas par l’IA.'),
-    h('div',{class:'warn-box'},'Les photos et le texte sont envoyés à Google (Gemini). Ne photographie que le cours : pas de nom, de visage ni d’information personnelle.'),
+    h('div',{class:'warn-box'},'Les photos et le texte sont envoyés au service d’IA (Groq). Ne photographie que le cours : pas de nom, de visage ni d’information personnelle.'),
     h('label',{class:'l'},'Matière'),subject,dl,h('label',{class:'l'},'Niveau'),level,h('label',{class:'l'},'Titre du chapitre'),title,
     h('label',{class:'l'},'Texte du cours'),text,
     h('div',{class:'row',style:'margin-top:10px'},h('button',{class:'btn sec sm',onclick:()=>pick.click()},'📷 Ajouter des photos (4 max)'),pick),thumbs,err,
@@ -206,9 +206,9 @@ function libView(){
 // ---- réglages ----
 function settingsView(){
   const out=h('div',{});
-  return [h('div',{class:'card'},h('h2',{},'Connexion IA (Gemini)'),
+  return [h('div',{class:'card'},h('h2',{},'Connexion IA'),
     h('p',{class:'muted'},'Teste que la clé enregistrée sur le serveur fonctionne et affiche les modèles disponibles. La clé n’est jamais visible ici.'),
-    h('button',{class:'btn sec',onclick:async e=>{e.target.disabled=true;out.replaceChildren(h('p',{class:'muted'},'Test en cours…'));try{const r=await api('/api/parent/ai/models');out.replaceChildren(h('p',{},'✓ Gemini répond. Modèle utilisé : ',h('strong',{},r.current)),h('p',{class:'muted'},'Disponibles : ',r.models.slice(0,12).join(', '),r.models.length>12?'…':''),r.models.includes(r.current)?null:h('div',{class:'warn-box'},'Le modèle configuré n’est pas dans cette liste : change GEMINI_MODEL dans wrangler.toml.'))}catch(err){out.replaceChildren(h('p',{class:'err'},err.message))}finally{e.target.disabled=false}}},'Tester Gemini'),out),
+    h('button',{class:'btn sec',onclick:async e=>{e.target.disabled=true;out.replaceChildren(h('p',{class:'muted'},'Test en cours…'));try{const r=await api('/api/parent/ai/models');out.replaceChildren(h('p',{},'✓ L’IA répond ('+(r.provider||'')+'). Modèle utilisé : ',h('strong',{},r.current)),h('p',{class:'muted'},'Disponibles : ',r.models.slice(0,12).join(', '),r.models.length>12?'…':''),r.models.includes(r.current)?null:h('div',{class:'warn-box'},'Le modèle configuré n’est pas dans cette liste : le serveur en choisira un autre automatiquement à la prochaine génération.'))}catch(err){out.replaceChildren(h('p',{class:'err'},err.message))}finally{e.target.disabled=false}}},'Tester l’IA'),out),
   h('div',{class:'card'},h('h2',{},'Confidentialité'),h('p',{class:'muted'},'Les résultats des enfants sont stockés sur ton compte Cloudflare (base D1), jamais dans le dépôt GitHub public. Seuls le prénom, les réponses et les scores sont conservés. Supprimer un profil efface tout son historique. Les textes et photos envoyés à l’IA sont transmis à Google ; aucun résultat d’enfant n’est jamais envoyé à l’IA.')),
   h('div',{class:'card'},h('button',{class:'btn out',onclick:()=>{ls.del();login()}},'Se déconnecter'))];
 }

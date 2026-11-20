@@ -4,7 +4,7 @@
 // - Secrets uniquement côté serveur : GEMINI_API_KEY, PARENT_PASSWORD, SESSION_SECRET.
 
 import { validateChapter } from './validate.js';
-import { AiError, checkGenerateInput, generateDraft, importDraft, listModels, normalizeWeights } from './ai.js';
+import { AiError, checkGenerateInput, currentModel, currentProvider, generateDraft, importDraft, listProviderModels, normalizeWeights, providerReady } from './ai.js';
 
 const enc = new TextEncoder();
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -244,7 +244,7 @@ async function route(req, env, url) {
   const method = req.method;
   let m;
 
-  if (path === '/api/health' && method === 'GET') return json({ ok: true, ai: Boolean(env.GEMINI_API_KEY), provider: env.AI_PROVIDER || 'gemini' });
+  if (path === '/api/health' && method === 'GET') return json({ ok: true, ai: providerReady(env), provider: currentProvider(env) });
 
   if (path === '/api/parent/login' && method === 'POST') {
     requireSecrets(env);
@@ -357,7 +357,7 @@ async function route(req, env, url) {
     }
 
     if (path === '/api/parent/ai/models' && method === 'GET') {
-      try { return json({ models: await listModels(env), current: env.GEMINI_MODEL || 'gemini-flash-latest' }); }
+      try { const models = await listProviderModels(env); return json({ provider: currentProvider(env), models, current: currentModel(env) }); }
       catch (e) { if (e instanceof AiError) throw new HttpError(e.status, e.message); throw e; }
     }
     if (path === '/api/parent/ai/import' && method === 'POST') {

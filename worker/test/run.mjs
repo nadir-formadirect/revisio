@@ -3,6 +3,8 @@ import { startMockGemini } from './mock-gemini.mjs';
 import { validateChapter } from '../src/validate.js';
 
 const BASE = 'http://127.0.0.1:8788';
+// Variables de test passées en ligne de commande (aucun fichier .dev.vars requis). Gemini simulé.
+const VARS = Object.entries({ AI_PROVIDER: 'gemini', GEMINI_API_KEY: 'test-key-SECRET-ne-doit-jamais-sortir', GEMINI_BASE_URL: 'http://127.0.0.1:8799', PARENT_PASSWORD: 'motdepasse-parent-test', SESSION_SECRET: 'secret-de-session-de-test-assez-long-0123456789', ALLOW_LOCALHOST: '1', AI_DAILY_LIMIT: '7' }).flatMap(([k, v]) => ['--var', `${k}:${v}`]);
 let pass = 0, fail = 0;
 const ok = (c, msg) => { if (c) { pass++; console.log('  ✓', msg); } else { fail++; console.log('  ✗ ÉCHEC :', msg); } };
 const call = async (path, { method = 'GET', body, token, origin } = {}) => {
@@ -13,8 +15,8 @@ const call = async (path, { method = 'GET', body, token, origin } = {}) => {
 };
 
 const { server: mock, state: mockState } = await startMockGemini();
-execSync('npx wrangler d1 execute revisio --local --persist-to .wrangler-state-test --file=schema.sql', { stdio: 'ignore' });
-const dev = spawn('npx', ['wrangler', 'dev', '--local', '--port', '8788', '--persist-to', '.wrangler-state-test'], { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+execSync('rm -rf .wrangler-state-test && npx wrangler d1 execute revisio --local --persist-to .wrangler-state-test --file=schema.sql', { stdio: 'ignore' });
+const dev = spawn('npx', ['wrangler', 'dev', '--local', '--port', '8788', '--persist-to', '.wrangler-state-test', ...VARS], { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
 let logs = ''; dev.stdout.on('data', (d) => (logs += d)); dev.stderr.on('data', (d) => (logs += d));
 for (let i = 0; i < 60; i++) { try { if ((await fetch(BASE + '/api/health')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 1000)); }
 

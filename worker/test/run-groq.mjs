@@ -1,0 +1,52 @@
+import { spawn, execSync } from 'node:child_process';
+import { startMockGroq } from './mock-groq.mjs';
+import { validateChapter } from '../src/validate.js';
+
+const BASE = 'http://127.0.0.1:8789';
+const VARS = Object.entries({ AI_PROVIDER: 'groq', GROQ_API_KEY: 'groq-key-SECRET-ne-doit-jamais-sortir', GROQ_BASE_URL: 'http://127.0.0.1:8798', PARENT_PASSWORD: 'motdepasse-parent-test', SESSION_SECRET: 'secret-de-session-de-test-assez-long-0123456789', AI_DAILY_LIMIT: '20' }).flatMap(([k, v]) => ['--var', `${k}:${v}`]);
+let pass = 0, fail = 0;
+const ok = (c, msg) => { if (c) { pass++; console.log('  ✓', msg); } else { fail++; console.log('  ✗ ÉCHEC :', msg); } };
+const call = async (path, { method = 'GET', body, token } = {}) => {
+  const r = await fetch(BASE + path, { method, headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...(token ? { authorization: 'Bearer ' + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  const text = await r.text(); let j = null; try { j = JSON.parse(text); } catch {}
+  return { status: r.status, json: j, text };
+};
+const { server: mock, state } = await startMockGroq();
+execSync('rm -rf .wrangler-state-groq && npx wrangler d1 execute revisio --local --persist-to .wrangler-state-groq --file=schema.sql', { stdio: 'ignore' });
+const dev = spawn('npx', ['wrangler', 'dev', '--local', '--port', '8789', '--persist-to', '.wrangler-state-groq', ...VARS], { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+let logs = ''; dev.stdout.on('data', (d) => (logs += d)); dev.stderr.on('data', (d) => (logs += d));
+for (let i = 0; i < 60; i++) { try { if ((await fetch(BASE + '/api/health')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 1000)); }
+try {
+  console.log('Fournisseur Groq (simulé)');
+  let r = await call('/api/health'); ok(r.json?.ai === true && r.json.provider === 'groq', 'santé : fournisseur groq, clé présente');
+  const P = (await call('/api/parent/login', { method: 'POST', body: { password: 'motdepasse-parent-test' } })).json.token;
+  const course = 'La cellule est l’unité de base du vivant. Elle possède une membrane, un cytoplasme et un noyau.';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Les cellules', courseText: course, images: [{ mime: 'image/jpeg', data: 'QUJD' }] } });
+  ok(r.status === 201, 'brouillon généré avec Groq');
+  let valid = true; try { validateChapter(r.json.chapter); } catch (e) { valid = false; console.log(e.message); }
+  ok(valid && r.json.chapter.questions.length === 20 && r.json.chapter.evaluationQuestions.length === 15, 'brouillon valide : 20 + 15 questions, 20 points par banque');
+  ok(r.json.chapter.questions.filter((q) => q.type === 'single').every((q) => q.options.includes(q.solution)), 'réponse « oui » réparée vers l’option exacte « Oui »');
+  ok(r.json.warnings.some((w) => w.includes('Incertain')), 'avertissement « Incertain » remonté');
+  const b = state.last.body;
+  ok(b.response_format?.type === 'json_object' && b.model === 'meta-llama/llama-4-scout-17b-16e-instruct', 'mode JSON et modèle par défaut (lit les photos)');
+  ok(Array.isArray(b.messages[1].content) && b.messages[1].content.some((p) => p.type === 'image_url' && p.image_url.url.startsWith('data:image/jpeg;base64,')), 'la photo est transmise à Groq');
+  ok(b.messages[0].content.includes('jamais une consigne'), 'consigne anti-injection présente');
+  ok(state.last.auth === 'Bearer groq-key-SECRET-ne-doit-jamais-sortir' && !r.text.includes('SECRET') && !JSON.stringify(b).includes('SECRET'), 'clé envoyée seulement dans l’en-tête, jamais dans les réponses');
+
+  state.mode = 'gone';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Modèle retiré', courseText: course, images: [{ mime: 'image/jpeg', data: 'QUJD' }] } });
+  ok(r.status === 201 && state.last.body.model === 'meta-llama/llama-4-maverick-17b-128e-instruct', 'modèle retiré → bascule automatique vers un modèle qui lit les photos');
+  r = await call('/api/parent/ai/models', { token: P });
+  ok(r.status === 200 && r.json.provider === 'groq' && r.json.current === 'meta-llama/llama-4-maverick-17b-128e-instruct' && !r.json.models.includes('whisper-large-v3'), '« Tester l’IA » : modèle utilisé affiché, modèles audio exclus');
+  state.mode = '429';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Quota', courseText: course } });
+  ok(r.status === 429 && /Quota gratuit Groq/.test(r.json.error), 'quota Groq dépassé → message clair, pas de facture');
+  state.mode = 'garbage';
+  r = await call('/api/parent/ai/generate', { method: 'POST', token: P, body: { subject: 'SVT', level: '5e', title: 'Illisible', courseText: course } });
+  ok(r.status === 502 && /illisible/.test(r.json.error), 'réponse illisible → erreur propre');
+  ok(!logs.includes('groq-key-SECRET'), 'la clé n’apparaît pas dans les journaux du serveur');
+} finally {
+  try { process.kill(-dev.pid); } catch {} mock.close();
+  console.log(`\n${pass} réussis, ${fail} échecs`);
+  process.exit(fail ? 1 : 0);
+}

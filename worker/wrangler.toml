@@ -5,8 +5,10 @@ compatibility_date = "2025-09-01"
 [vars]
 # Origine autorisée à appeler l'API (GitHub Pages). Pas de slash final.
 ALLOWED_ORIGIN = "https://nadir-formadirect.github.io"
-# Fournisseur IA (voir src/ai.js). Un seul est implémenté : "gemini".
-AI_PROVIDER = "gemini"
+# Fournisseur IA (voir src/ai.js) : "groq" (par défaut, rapide, gratuit) ou "gemini" (en réserve).
+AI_PROVIDER = "groq"
+# Modèle Groq qui lit les photos. S'il est retiré, le serveur en choisit un autre automatiquement.
+GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 # Alias "latest" : évite de figer un modèle retiré. Vérifier avec le bouton « Tester Gemini » de l'espace parent.
 GEMINI_MODEL = "gemini-2.5-flash"
 # Plafond d'appels IA par jour (UTC) : garde-fou contre toute boucle ou abus.
@@ -19,6 +21,7 @@ database_name = "revisio"
 database_id = "2e653208-972f-40bf-b5a8-2c9039d263bb"
 
 # Secrets (jamais dans ce fichier) — à créer avec `npx wrangler secret put NOM` :
-#   GEMINI_API_KEY   clé Gemini
+#   GROQ_API_KEY     clé Groq (console.groq.com)
+#   GEMINI_API_KEY   clé Gemini (seulement si AI_PROVIDER = "gemini")
 #   PARENT_PASSWORD  mot de passe de l'espace parent (≥ 12 caractères)
 #   SESSION_SECRET   chaîne aléatoire ≥ 32 caractères (signe les jetons)
